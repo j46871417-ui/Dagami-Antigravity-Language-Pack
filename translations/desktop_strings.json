@@ -1,0 +1,19 @@
+{
+    "menu": {
+        "New Window": "Новое окно",
+        "Docs": "Документация",
+        "Check for Updates": "Проверить обновления"
+    },
+    "tray": {
+        "No agents running": "Нет запущенных агентов",
+        "agent running": "агент запущен",
+        "agents running": "агентов запущено"
+    },
+    "wizard": {
+        "Welcome to Antigravity": "Добро пожаловать в Antigravity",
+        "Setting up…": "Настройка…",
+        "Welcome to the new Antigravity!": "Добро пожаловать в новый Antigravity!",
+        "Download the Antigravity IDE": "Скачать Antigravity IDE",
+        "Explore the new Antigravity": "Познакомиться с новым Antigravity"
+    }
+}

@@ -1,0 +1,143 @@
+{
+    "commands": {
+        "antigravity.login": {
+            "en": "Log in to IDE",
+            "ru": "Войти в IDE"
+        },
+        "antigravity.loginWithAuthToken": {
+            "en": "Provide Auth Token (Backup Login)",
+            "ru": "Ввести токен авторизации (резервный вход)"
+        },
+        "antigravity.importVSCodeSettings": {
+            "en": "Import VS Code settings",
+            "ru": "Импорт настроек VS Code"
+        },
+        "antigravity.importVSCodeExtensions": {
+            "en": "Import VS Code extensions",
+            "ru": "Импорт расширений VS Code"
+        },
+        "antigravity.importVSCodeRecentWorkspaces": {
+            "en": "Import VS Code recent workspaces",
+            "ru": "Импорт недавних проектов VS Code"
+        },
+        "antigravity.importCursorSettings": {
+            "en": "Import Cursor settings",
+            "ru": "Импорт настроек Cursor"
+        },
+        "antigravity.importCursorExtensions": {
+            "en": "Import Cursor extensions",
+            "ru": "Импорт расширений Cursor"
+        },
+        "antigravity.importWindsurfSettings": {
+            "en": "Import Windsurf settings",
+            "ru": "Импорт настроек Windsurf"
+        },
+        "antigravity.importWindsurfExtensions": {
+            "en": "Import Windsurf extensions",
+            "ru": "Импорт расширений Windsurf"
+        },
+        "antigravity.generateCommitMessage": {
+            "en": "Generate Commit Message",
+            "ru": "Сгенерировать сообщение коммита"
+        },
+        "antigravity.restartLanguageServer": {
+            "en": "Restart Language Server",
+            "ru": "Перезапустить языковой сервер"
+        },
+        "antigravity.killLanguageServerAndReloadWindow": {
+            "en": "Kill Language Server and Reload Window",
+            "ru": "Остановить языковой сервер и перезагрузить"
+        },
+        "antigravity.togglePersistentLanguageServer": {
+            "en": "Toggle Persistent Language Server and Reload Window",
+            "ru": "Вкл/выкл фоновый языковой сервер и перезагрузить"
+        },
+        "antigravity.openPersistentLanguageServerLog": {
+            "en": "Open Persistent Language Server Log",
+            "ru": "Открыть журнал фонового языкового сервера"
+        },
+        "antigravity.copyApiKey": {
+            "en": "Copy API Key to Clipboard",
+            "ru": "Скопировать API-ключ в буфер обмена"
+        },
+        "antigravity.openChangeLog": {
+            "en": "Open Changelog",
+            "ru": "Открыть журнал изменений"
+        },
+        "antigravity.openBrowser": {
+            "en": "Open Browser",
+            "ru": "Открыть браузер"
+        },
+        "antigravity.showBrowserAllowlist": {
+            "en": "Show Browser Allowlist",
+            "ru": "Показать список разрешённых сайтов"
+        },
+        "antigravity.killRemoteExtensionHost": {
+            "en": "Kill Extension Host on Remote Server",
+            "ru": "Остановить хост расширений на удалённом сервере"
+        },
+        "antigravity.importCiderSettings": {
+            "en": "Import Cider settings",
+            "ru": "Импорт настроек Cider"
+        },
+        "antigravity.startDemoMode": {
+            "en": "[Beta] Start Demo Mode",
+            "ru": "[Бета] Запустить демо-режим"
+        },
+        "antigravity.endDemoMode": {
+            "en": "[Beta] End Demo Mode",
+            "ru": "[Бета] Завершить демо-режим"
+        }
+    },
+    "configuration": {
+        "antigravity.marketplaceExtensionGalleryServiceURL": {
+            "en": "Changes the base URL for marketplace search results. You must restart Antigravity to use the new marketplace after changing this value.",
+            "ru": "Базовый URL для поиска расширений в маркетплейсе. Перезапустите Antigravity после изменения."
+        },
+        "antigravity.marketplaceGalleryItemURL": {
+            "en": "Changes the base URL on each extension page. You must restart Antigravity to use the new marketplace after changing this value.",
+            "ru": "Базовый URL страницы расширения. Перезапустите Antigravity после изменения."
+        },
+        "antigravity.searchMaxWorkspaceFileCount": {
+            "en": "Jetski will attempt to compute embeddings for workspaces up to this many files. This file count ignores .gitignore and binary files. Raising this limit from the default value may lead to performance issues. Values 0 or below will be treated as unlimited.",
+            "ru": "Максимальное количество файлов для индексации проекта. Файлы из .gitignore и бинарные файлы не учитываются. Увеличение лимита может привести к проблемам производительности. 0 или меньше = без ограничений."
+        },
+        "antigravity.enableCursorImportCursor": {
+            "en": "Enable the Cursor-import commands in the palette",
+            "ru": "Включить команды импорта из Cursor в палитре команд"
+        },
+        "antigravity.persistentLanguageServer": {
+            "en": "Keep the Language Server running after the editor is closed.",
+            "ru": "Не останавливать языковой сервер при закрытии редактора."
+        }
+    },
+    "customEditors": {
+        "antigravity.workflowEditor": {
+            "en": "Workflow Editor",
+            "ru": "Редактор рабочих процессов"
+        },
+        "antigravity.ruleEditor": {
+            "en": "Rule Editor",
+            "ru": "Редактор правил"
+        }
+    },
+    "configurationTitle": {
+        "en": "Antigravity Editor",
+        "ru": "Редактор Antigravity"
+    },
+    "ui_strings": {
+        "Generating completions": "Генерация подсказок",
+        "Not logged in": "Не авторизован",
+        "An error occurred while authenticating": "Ошибка аутентификации",
+        "Unknown error": "Неизвестная ошибка",
+        "Unknown reason": "Неизвестная причина",
+        "Retry": "Повторить",
+        "Open URL": "Открыть ссылку",
+        "Open in current window": "Открыть в текущем окне",
+        "Continue conversation in the current workspace": "Продолжить диалог в текущем проекте",
+        "Cloudtop selection": "Выбор Cloudtop",
+        "Tab - Report Issue": "Tab — Сообщить о проблеме",
+        "Open in workspace:": "Открыть в проекте:",
+        "Antigravity Migration": "Миграция Antigravity"
+    }
+}

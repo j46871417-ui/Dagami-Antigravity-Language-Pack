@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# PyInstaller / build artifacts
+build/
+dist/
+*.spec
+
+# Compiled executable
+AntigravityLocalizer.exe
+
+# Backups created by the localizer
+*.bak.original
+*.asar.bak.original
+
+# IDE / OS
+.idea/
+.vscode/
+Thumbs.db
+desktop.ini
