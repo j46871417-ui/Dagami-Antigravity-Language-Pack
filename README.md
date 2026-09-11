@@ -19,7 +19,7 @@
 
 ## Быстрый запуск (для пользователей)
 
-1. Скачайте актуальный `AntigravityLocalizer.exe` из раздела [Releases]([https://github.com](https://github.com/j46871417-ui/-Antigravity/releases/tag/).
+1. Скачайте актуальный `AntigravityLocalizer.exe` из раздела [Releases](https://github.com/j46871417-ui/-Antigravity/releases/tag/).
 2. Запустите файл (права администратора не требуются, если приложение установлено в AppData).
 3. Нажмите **«Установить русификатор»**.
 4. Запустите Google Antigravity — интерфейс будет полностью на русском языке.
