@@ -280,6 +280,7 @@ namespace AntigravityLocalizer
                 Log("• Переведено более 950 элементов интерфейса, меню, настроек.");
                 Log("• Все проекты, чаты, сессии и ключи API сохранены.");
                 Log("• Запустите Antigravity и наслаждайтесь русской версией!");
+                Log("• Чат и сообщество в Telegram: https://t.me/+8qU7020rMF84OWNi");
                 return true;
             }
             catch (Exception ex)
@@ -372,6 +373,8 @@ namespace AntigravityLocalizer
             InitializeComponent();
             _engine = new LocalizerEngine(AppendLog);
             RefreshPaths();
+            AppendLog("Google Antigravity Localizer готов к работе.");
+            AppendLog("Группа сообщества в Telegram: https://t.me/+8qU7020rMF84OWNi\n");
         }
 
         private void InitializeComponent()
@@ -406,6 +409,19 @@ namespace AntigravityLocalizer
 
             header.Controls.Add(title);
             header.Controls.Add(subtitle);
+
+            LinkLabel lnkTelegram = new LinkLabel();
+            lnkTelegram.Text = "💬 Чат в Telegram";
+            lnkTelegram.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            lnkTelegram.LinkColor = Color.FromArgb(100, 181, 246);
+            lnkTelegram.ActiveLinkColor = Color.White;
+            lnkTelegram.Location = new Point(490, 24);
+            lnkTelegram.AutoSize = true;
+            lnkTelegram.Cursor = Cursors.Hand;
+            lnkTelegram.LinkClicked += (s, e) => {
+                try { Process.Start("https://t.me/+8qU7020rMF84OWNi"); } catch { }
+            };
+            header.Controls.Add(lnkTelegram);
             this.Controls.Add(header);
 
             // Main Container

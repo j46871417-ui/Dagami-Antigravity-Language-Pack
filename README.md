@@ -3,6 +3,7 @@
 [![Лицензия: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/j46871417-ui/-Antigravity)](https://github.com/j46871417-ui/Antigravity-Localizer/releases)
 [![Antivirus Clean](https://img.shields.io/badge/Antivirus-100%25_Clean-brightgreen.svg)](#почему-powershell-100-чист-от-антивирусов)
+[![Telegram](https://img.shields.io/badge/Telegram-Чат_сообщества-2CA5E0?logo=telegram&logoColor=white)](https://t.me/+8qU7020rMF84OWNi)
 
 Полноценная русская локализация для экосистемы **Google Antigravity**:
 - **Antigravity 2.0 Desktop** — перевод 950+ элементов интерфейса, нативного меню окна, контекстного меню трея, диалогов выхода, экрана предзагрузки, виртуальных списков и всех 187+ настроек.
@@ -95,6 +96,15 @@ irm https://raw.githubusercontent.com/j46871417-ui/Antigravity-Localizer/main/in
 └── assets/
     └── nls.messages.ru.json    # 15 000+ строк перевода ядра IDE
 ```
+
+---
+
+## 💬 Сообщество и группа в Telegram
+
+Присоединяйтесь к Telegram-группе, посвященной моим программам и разработкам сообщества:  
+👉 **[Вступить в Telegram-сообщество](https://t.me/+8qU7020rMF84OWNi)**
+
+Здесь можно обсудить работу русификатора, предложить улучшения, задать вопросы по моим программам и проектам сообщества.
 
 ---
 

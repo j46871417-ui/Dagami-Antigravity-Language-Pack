@@ -22,6 +22,7 @@ $Host.UI.RawUI.WindowTitle = "Google Antigravity - Русификатор"
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "    Google Antigravity — Русская локализация (RU)         " -ForegroundColor Green
 Write-Host "    Репозиторий: https://github.com/j46871417-ui/Antigravity-Localizer" -ForegroundColor Gray
+Write-Host "    Telegram:    https://t.me/+8qU7020rMF84OWNi" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -258,6 +259,7 @@ try {
     Write-Host "• Переведено более 950 элементов интерфейса, настроек и меню." -ForegroundColor White
     Write-Host "• Все ваши проекты, чаты, сессии и ключи полностью сохранены." -ForegroundColor White
     Write-Host "• Запустите Antigravity, чтобы работать в полностью русском интерфейсе!" -ForegroundColor White
+    Write-Host "• Сообщество и группа в Telegram: https://t.me/+8qU7020rMF84OWNi" -ForegroundColor Cyan
     Write-Host "• Для отката запустите скрипт с параметром -Uninstall" -ForegroundColor Gray
     Write-Host ""
 } catch {

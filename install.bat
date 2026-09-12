@@ -6,6 +6,7 @@ cd /d "%~dp0"
 echo ==========================================================
 echo    Google Antigravity — Русификатор (Desktop + IDE)
 echo    https://github.com/j46871417-ui/Antigravity-Localizer
+echo    Telegram: https://t.me/+8qU7020rMF84OWNi
 echo ==========================================================
 echo.
 
