@@ -5,9 +5,9 @@
     Устанавливает или удаляет русификацию десктопного приложения Antigravity 2.0 и Antigravity IDE.
     100% открытый исходный код без срабатываний антивирусов.
     Поддерживает запуск одной строкой через консоль PowerShell:
-    irm https://raw.githubusercontent.com/j46871417-ui/-Antigravity/main/install.ps1 | iex
+    irm https://raw.githubusercontent.com/j46871417-ui/Antigravity-Localizer/main/install.ps1 | iex
 .LINK
-    https://github.com/j46871417-ui/-Antigravity
+    https://github.com/j46871417-ui/Antigravity-Localizer
 #>
 
 param(
@@ -21,7 +21,7 @@ $Host.UI.RawUI.WindowTitle = "Google Antigravity - Русификатор"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "    Google Antigravity — Русская локализация (RU)         " -ForegroundColor Green
-Write-Host "    Репозиторий: https://github.com/j46871417-ui/-Antigravity" -ForegroundColor Gray
+Write-Host "    Репозиторий: https://github.com/j46871417-ui/Antigravity-Localizer" -ForegroundColor Gray
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -147,7 +147,7 @@ if ([string]::IsNullOrWhiteSpace($ScriptDir) -or (-not (Test-Path "$ScriptDir\re
 $TempDir = $null
 if ($IsRemote) {
     Write-Host "[*] Загрузка актуальных файлов локализации с GitHub..." -ForegroundColor Cyan
-    $ZipUrl = "https://github.com/j46871417-ui/-Antigravity/archive/refs/heads/main.zip"
+    $ZipUrl = "https://github.com/j46871417-ui/Antigravity-Localizer/archive/refs/heads/main.zip"
     $TempDir = Join-Path $env:TEMP ("antigravity_ru_" + [guid]::NewGuid().ToString().Substring(0, 8))
     $TempZip = "$TempDir.zip"
 
@@ -164,7 +164,7 @@ if ($IsRemote) {
         if ($extractedRoot -and (Test-Path (Join-Path $extractedRoot.FullName "resources\app.asar"))) {
             $ScriptDir = $extractedRoot.FullName
         } else {
-            $ScriptDir = Join-Path $TempDir "-Antigravity-main"
+            $ScriptDir = Join-Path $TempDir "Antigravity-Localizer-main"
         }
 
         if (-not (Test-Path "$ScriptDir\resources\app.asar")) {

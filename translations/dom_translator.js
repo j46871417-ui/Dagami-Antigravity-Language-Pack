@@ -1,7 +1,7 @@
 /**
  * Google Antigravity 2.0 — Russian Localization Engine (Open Source)
  * Автоматический перевод пользовательского интерфейса на русский язык.
- * Репозиторий: https://github.com/j46871417-ui/-Antigravity
+ * Репозиторий: https://github.com/j46871417-ui/Antigravity-Localizer
  */
 (function () {
   'use strict';

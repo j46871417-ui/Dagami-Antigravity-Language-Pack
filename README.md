@@ -1,7 +1,7 @@
 # Google Antigravity Localizer (Русификатор)
 
 [![Лицензия: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![GitHub release](https://img.shields.io/github/v/release/j46871417-ui/-Antigravity)](https://github.com/j46871417-ui/-Antigravity/releases)
+[![GitHub release](https://img.shields.io/github/v/release/j46871417-ui/-Antigravity)](https://github.com/j46871417-ui/Antigravity-Localizer/releases)
 [![Antivirus Clean](https://img.shields.io/badge/Antivirus-100%25_Clean-brightgreen.svg)](#почему-powershell-100-чист-от-антивирусов)
 
 Полноценная русская локализация для экосистемы **Google Antigravity**:
@@ -17,12 +17,12 @@
 Откройте консоль **PowerShell** и выполните:
 
 ```powershell
-irm https://raw.githubusercontent.com/j46871417-ui/-Antigravity/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/j46871417-ui/Antigravity-Localizer/main/install.ps1 | iex
 ```
 
 > **Для отката к оригинальной версии от Google** запустите:
 > ```powershell
-> irm https://raw.githubusercontent.com/j46871417-ui/-Antigravity/main/install.ps1 | iex -Uninstall
+> irm https://raw.githubusercontent.com/j46871417-ui/Antigravity-Localizer/main/install.ps1 | iex -Uninstall
 > ```
 
 ---
@@ -36,7 +36,7 @@ irm https://raw.githubusercontent.com/j46871417-ui/-Antigravity/main/install.ps1
 
 ### Вариант 2: Графический установщик (`AntigravityLocalizer.exe`)
 Для тех, кто предпочитает классическое окно с кнопками:
-1. Скачайте `AntigravityLocalizer.exe` из [Releases](https://github.com/j46871417-ui/-Antigravity/releases/tag/0.0.1).
+1. Скачайте `AntigravityLocalizer.exe` из [Releases](https://github.com/j46871417-ui/Antigravity-Localizer/releases/tag/0.0.1).
 2. Запустите и нажмите **«Установить русификатор»**.
 3. Интерфейс Antigravity станет полностью на русском языке.
 
