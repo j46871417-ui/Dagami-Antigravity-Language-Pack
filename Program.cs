@@ -24,7 +24,7 @@ namespace AntigravityLocalizer
 {
     public static class AppConfig
     {
-        public const string Version = "0.0.11";
+        public const string Version = "0.0.12";
     }
 
     static class Program
@@ -406,7 +406,7 @@ namespace AntigravityLocalizer
             title.AutoSize = true;
 
             Label subtitle = new Label();
-            subtitle.Text = "Русификация интерфейса (950+ фраз) и перевод размышлений на лету!";
+            subtitle.Text = "Русификация интерфейса (2200+ фраз), перевод ответов ИИ и мыслей на лету!";
             subtitle.Font = new Font("Segoe UI", 9F);
             subtitle.ForeColor = Color.FromArgb(180, 205, 235);
             subtitle.Location = new Point(21, 38);
