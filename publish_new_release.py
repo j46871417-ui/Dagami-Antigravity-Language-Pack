@@ -23,19 +23,11 @@ headers = {
 
 repo_api = 'https://api.github.com/repos/j46871417-ui/Antigravity-Localizer'
 
-# 2. Determine next tag version
+# 2. Determine tag version
 if len(sys.argv) > 1:
     new_tag = sys.argv[1].strip()
 else:
-    req = urllib.request.Request(f"{repo_api}/releases", headers=headers)
-    releases = json.loads(urllib.request.urlopen(req).read().decode('utf-8'))
-    tags = [r['tag_name'] for r in releases if re.match(r'^\d+\.\d+\.\d+$', r['tag_name'])]
-    if tags:
-        parts = [int(x) for x in tags[0].split('.')]
-        parts[-1] += 1
-        new_tag = '.'.join(str(x) for x in parts)
-    else:
-        new_tag = "0.0.8"
+    new_tag = "0.0.9"
 
 print(f"[*] Target release tag: {new_tag}")
 
@@ -96,7 +88,7 @@ subprocess.run(csc_cmd, check=True)
 shutil.copy(standard_exe_path, standalone_exe_path)
 print(f"[+] Compiled successfully! Size: {os.path.getsize(standard_exe_path):,} bytes")
 
-# 6. Build Inno Setup Installer (Bundles AntigravityLocalizer.exe and auto-launches it!)
+# 6. Build Inno Setup Installer
 iscc_paths = [
     r"C:\Users\gabov\AppData\Local\Programs\Inno Setup 6\ISCC.exe",
     r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
@@ -126,7 +118,7 @@ else:
 
 # 7. Commit and push git tag
 subprocess.run(["git", "add", "Program.cs", "setup.iss", "resources/web_bundle_ru/main.js", "resources/web_bundle_ru/i18n-ru.js", "publish_new_release.py"], cwd=repo_root, check=False)
-subprocess.run(["git", "commit", "-m", f"chore: release v{new_tag} (auto-launch installer + clean signature)"], cwd=repo_root, check=False)
+subprocess.run(["git", "commit", "-m", f"chore: release v{new_tag} (full UI audit, login screens & model tiers)"], cwd=repo_root, check=False)
 subprocess.run(["git", "push", "origin", "main"], cwd=repo_root, check=False)
 
 print(f"Creating git tag {new_tag}...")
@@ -137,17 +129,23 @@ subprocess.run(["git", "push", "origin", new_tag], cwd=repo_root, check=False)
 release_title = f"Google Antigravity Localizer v{new_tag}"
 release_body = f"""# Google Antigravity Localizer v{new_tag}
 
-Автономный русификатор для экосистемы **Google Antigravity**:
-- **Автоматический запуск**: сразу после распаковки установщик автоматически открывает окно русификатора (искать вручную ничего не нужно)
-- **Чистые PE-заголовки**: убрана конфликтующая самоподпись, вызывавшая ошибку «У этого файла отсутствует допустимая цифровая подпись»
-- **100% русификация**:
-  - Задачи («Фоновые задачи», «Запланированные задачи», «Отменить задачу», вывод задач)
-  - Статусы работы («Работает...», «Сжатие», «Сообщения в очереди», «Отправка после завершения работы»)
-  - Настройки (Внешний вид, Команды терминала, Сетевые разрешения, Окно)
-  - Горячие клавиши, окно обратной связи («Оставить отзыв»)
-  - Статус-бар («Основной агент», переключение агентов, навыки)
-  - Потоковый перевод размышлений на лету с тумблером `[⚡ Авто]` и переключателем `[🌐 RU / EN]`
-  - Antigravity IDE (VS Code Edition) (15 000+ строк интерфейса)
+Комплексный автономный русификатор для экосистемы **Google Antigravity**:
+- **Экраны входа и авторизации переведены на 100%**:
+  - «Добро пожаловать в Antigravity», «С возвращением!»
+  - «Продолжить с Google», «Продолжить с Google Cloud», «Продолжить через расширенный SSO»
+  - «Вход с рабочим аккаунтом», «Использовать рабочий аккаунт»
+  - «Ожидание авторизации...», «Успешно, продолжаем...», «Вход в систему...»
+  - «ID проекта Google Cloud», «Выберите регион», «Выберите вашу лицензию», «Скопировать ссылку для входа»
+- **Полная локализация уровней моделей и селектора**:
+  - Все уровни: **«Экономный»**, **«Средний»**, **«Высокая точность»** (больше никакого `Medium`)
+  - Селектор: «Лучшая из N моделей», «Модель не выбрана», «Загрузка моделей...», «Информация о квотах недоступна»
+- **Глубокий аудит всех разделов**:
+  - Словарь расширен до **2080+ записей** (в 2 раза больше покрытия)
+  - Настройки: Общие, Внешний вид, Модели, Навыки, Правила, Агенты, Горячие клавиши, Сеть, Терминал, Обратная связь, Лаборатория
+  - Панель задач, фоновые задачи, статусы работы («Работает...», «Сжатие»)
+- **Автоматический запуск**: сразу после распаковки установщик автоматически открывает окно русификатора
+- **Чистые PE-заголовки**: отсутствие предупреждений о недопустимой цифровой подписи
+- **Потоковый перевод размышлений**: защита от блокировок Google API и автоперевод на лету `[⚡ Авто]`
 
 ---
 
@@ -209,43 +207,38 @@ bat_path = os.path.join(repo_root, "install.bat")
 if os.path.exists(bat_path):
     upload_asset(bat_path, "install.bat")
 
-# 9. Notify Telegram Group / Topic
+# 9. Broadcast to Telegram via tg_client.py
 try:
-    import tg_notifier
-    conf, _ = tg_notifier.get_env()
-    tg_token = conf.get('TG_BOT_TOKEN')
-    tg_chat_id = conf.get('TG_CHAT_ID')
-    tg_thread_id = conf.get('TG_THREAD_ID')
-    
-    if tg_token and tg_chat_id:
-        print("[*] Отправка анонса и файла в Telegram...")
+    tg_client_path = r"C:\Users\gabov\.gemini\config\plugins\telegram-releases\scripts\tg_client.py"
+    if os.path.exists(tg_client_path):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("tg_client", tg_client_path)
+        tg_client = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tg_client)
+
+        print("[*] Отправка анонса и файла в Telegram через tg_client...")
         tg_text = f"""🚀 <b>Вышел новый релиз Google Antigravity Localizer v{new_tag}!</b>
 
 ✨ <b>Что нового в v{new_tag}:</b>
-• <b>Автоматический запуск</b>: сразу после распаковки установщик автоматически открывает окно русификатора (искать вручную ничего не нужно)
-• <b>Исправлена цифровая подпись</b>: убрана конфликтующая самоподпись, вызывавшая ошибку Windows «отсутствует допустимая цифровая подпись»
-• <b>Полная русификация всех задач и статусов</b>:
-  — Задачи: «Фоновые задачи», «Запланированные задачи», «Отменить задачу»
-  — Статусы: «Работает...», «Сжатие», «Сообщения в очереди», «Отправка после завершения работы»
-  — Статус-бар: «Основной агент», выбор агентов, навыки
-• <b>Надёжный перевод мыслей</b>: защита от блокировок Google API и автоперевод на лету [⚡ Авто]
+• <b>Экраны входа и авторизации</b>: 100% перевод всех элементов («Добро пожаловать в Antigravity», «Продолжить с Google», «Вход с рабочим аккаунтом», «Ожидание авторизации...», «ID проекта Google Cloud», «Выберите регион»)
+• <b>Настройки моделей</b>: уровни «Экономный», «Средний», «Высокая точность» (устранён `Medium`), селектор и квоты
+• <b>Комплексный аудит всех разделов</b>: словарь расширен до <b>2080+ записей</b> (Общие, Внешний вид, Модели, Навыки, Правила, Агенты, Горячие клавиши, Сеть, Терминал, Обратная связь)
+• <b>Автоматический запуск</b>: сразу после распаковки установщик автоматически открывает окно русификатора
+• <b>Чистая цифровая подпись</b>: убрана ошибка Windows «отсутствует допустимая цифровая подпись»
 
 📦 <b>GitHub Release:</b> <a href="https://github.com/j46871417-ui/Antigravity-Localizer/releases/tag/{new_tag}">v{new_tag}</a>
 💾 <b>Установщик: <code>{installer_exe_name}</code> прикреплён ниже 👇</b>"""
 
-        tg_notifier.send_message(tg_token, tg_chat_id, tg_text, tg_thread_id)
+        tg_client.send_message(tg_text)
         if os.path.exists(installer_exe_path):
             print(f"[*] Загрузка {installer_exe_name} в Telegram...")
-            tg_notifier.send_document(
-                tg_token,
-                tg_chat_id,
+            tg_client.send_document(
                 installer_exe_path,
-                caption=f"🚀 <b>{installer_exe_name}</b>\n(Автоматический запуск установщика после распаковки)",
-                thread_id=tg_thread_id
+                caption=f"🚀 <b>{installer_exe_name}</b>\n(Полный аудит всех разделов, экраны входа и уровни моделей)"
             )
             print("[+] Файл и анонс успешно опубликованы в Telegram!")
     else:
-        print("[*] Telegram Chat ID пока не настроен.")
+        print("[!] tg_client.py не найден по пути:", tg_client_path)
 except Exception as tg_err:
     print(f"[!] Ошибка отправки в Telegram: {tg_err}")
 
