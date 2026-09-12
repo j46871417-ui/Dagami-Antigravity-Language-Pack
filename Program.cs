@@ -22,6 +22,11 @@ using System.Windows.Forms;
 
 namespace AntigravityLocalizer
 {
+    public static class AppConfig
+    {
+        public const string Version = "0.0.5";
+    }
+
     static class Program
     {
         [DllImport("kernel32.dll")]
@@ -46,7 +51,7 @@ namespace AntigravityLocalizer
                 AttachConsole(ATTACH_PARENT_PROCESS);
                 Console.WriteLine();
                 Console.WriteLine("==========================================================");
-                Console.WriteLine("        Google Antigravity Localizer (CLI Mode)          ");
+                Console.WriteLine(string.Format("      Google Antigravity Localizer v{0} (CLI Mode)        ", AppConfig.Version));
                 Console.WriteLine("==========================================================");
                 LocalizerEngine engine = new LocalizerEngine(msg => Console.WriteLine(msg));
                 if (cliInstall)
@@ -373,13 +378,13 @@ namespace AntigravityLocalizer
             InitializeComponent();
             _engine = new LocalizerEngine(AppendLog);
             RefreshPaths();
-            AppendLog("Google Antigravity Localizer готов к работе.");
+            AppendLog(string.Format("Google Antigravity Localizer v{0} готов к работе.", AppConfig.Version));
             AppendLog("Группа сообщества в Telegram: https://t.me/+8qU7020rMF84OWNi\n");
         }
 
         private void InitializeComponent()
         {
-            this.Text = "Google Antigravity Localizer (Русификатор)";
+            this.Text = string.Format("Google Antigravity Localizer v{0} (Русификатор)", AppConfig.Version);
             this.Size = new Size(680, 560);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -394,7 +399,7 @@ namespace AntigravityLocalizer
             header.BackColor = Color.FromArgb(24, 43, 73);
 
             Label title = new Label();
-            title.Text = "Google Antigravity — Русификатор v0.0.5";
+            title.Text = string.Format("Google Antigravity — Русификатор v{0}", AppConfig.Version);
             title.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
             title.ForeColor = Color.White;
             title.Location = new Point(20, 12);

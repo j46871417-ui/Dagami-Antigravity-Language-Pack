@@ -4,6 +4,8 @@ import subprocess
 import urllib.request
 import json
 import re
+import zipfile
+import shutil
 
 repo_root = r"c:\Users\gabov\Documents\antigravity\happy-bose"
 
@@ -33,23 +35,84 @@ else:
         parts[-1] += 1
         new_tag = '.'.join(str(x) for x in parts)
     else:
-        new_tag = "0.0.5"
+        new_tag = "0.0.6"
 
-print(f"Target release tag: {new_tag}")
+print(f"[*] Target release tag: {new_tag}")
 
-# 3. Create and push git tag
+# 3. Update version in Program.cs
+prog_cs_path = os.path.join(repo_root, "Program.cs")
+with open(prog_cs_path, "r", encoding="utf-8") as f:
+    prog_content = f.read()
+
+prog_content = re.sub(
+    r'public const string Version = "[^"]+";',
+    f'public const string Version = "{new_tag}";',
+    prog_content
+)
+with open(prog_cs_path, "w", encoding="utf-8") as f:
+    f.write(prog_content)
+print(f"[+] Updated Program.cs version to {new_tag}")
+
+# 4. Rebuild payload.zip
+payload_zip_path = os.path.join(repo_root, "payload.zip")
+if os.path.exists(payload_zip_path):
+    os.remove(payload_zip_path)
+
+with zipfile.ZipFile(payload_zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+    z.write(os.path.join(repo_root, "resources", "app.asar"), "resources/app.asar")
+    wb_dir = os.path.join(repo_root, "resources", "web_bundle_ru")
+    for root, dirs, files in os.walk(wb_dir):
+        for fl in files:
+            full = os.path.join(root, fl)
+            rel = os.path.relpath(full, repo_root).replace("\\", "/")
+            z.write(full, rel)
+    ide_json = os.path.join(repo_root, "translations", "ide_strings.json")
+    if os.path.exists(ide_json):
+        z.write(ide_json, "translations/ide_strings.json")
+print("[+] payload.zip rebuilt")
+
+# 5. Compile versioned exe and standard exe
+versioned_exe_name = f"AntigravityLocalizer_v{new_tag}.exe"
+versioned_exe_path = os.path.join(repo_root, versioned_exe_name)
+standard_exe_path = os.path.join(repo_root, "AntigravityLocalizer.exe")
+
+csc_path = r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+csc_cmd = [
+    csc_path,
+    "/nologo",
+    "/target:winexe",
+    "/optimize+",
+    f"/out:{versioned_exe_path}",
+    f"/resource:{payload_zip_path},payload.zip",
+    "/r:System.dll",
+    "/r:System.Windows.Forms.dll",
+    "/r:System.Drawing.dll",
+    "/r:System.IO.Compression.dll",
+    "/r:System.IO.Compression.FileSystem.dll",
+    prog_cs_path
+]
+print(f"[*] Compiling {versioned_exe_name}...")
+subprocess.run(csc_cmd, check=True)
+shutil.copy(versioned_exe_path, standard_exe_path)
+print(f"[+] Compiled successfully! Size: {os.path.getsize(versioned_exe_path):,} bytes")
+
+# 6. Commit and push git tag
+subprocess.run(["git", "add", "Program.cs"], cwd=repo_root, check=False)
+subprocess.run(["git", "commit", "-m", f"chore: bump version to {new_tag}"], cwd=repo_root, check=False)
+subprocess.run(["git", "push", "origin", "main"], cwd=repo_root, check=False)
+
 print(f"Creating git tag {new_tag}...")
 subprocess.run(["git", "tag", "-a", new_tag, "-m", f"Release {new_tag}"], cwd=repo_root, check=False)
 subprocess.run(["git", "push", "origin", new_tag], cwd=repo_root, check=False)
 
-# 4. Release title and body
+# 7. Create GitHub Release
 release_title = f"Google Antigravity Localizer v{new_tag}"
 release_body = f"""# Google Antigravity Localizer v{new_tag}
 
 Автономный русификатор для экосистемы **Google Antigravity**:
 - **Antigravity 2.0 Desktop** (950+ элементов интерфейса, все 187 параметров настроек, меню окна, системный трей, экран загрузки)
 - **Antigravity IDE (VS Code Edition)** (15 000+ строк интерфейса)
-- **Перевод размышлений агента (Thinking Translation) на лету** с тумблером `[⚡ Авто]` и кнопками `[🌐 RU / EN]` прямо в блоке мыслей
+- **Потоковый перевод размышлений агента (Thinking Translation) на лету** с тумблером `[⚡ Авто]` и кнопками `[🌐 RU / EN]` прямо в блоке мыслей
 
 ---
 
@@ -59,21 +122,11 @@ release_body = f"""# Google Antigravity Localizer v{new_tag}
 
 ---
 
-## ⚡ Способы установки:
-
-### 1. Автономный `.exe` (Рекомендуется)
-Скачайте **`AntigravityLocalizer.exe`** ниже и нажмите **«Установить русификатор»**.
-
-### 2. Через консоль PowerShell:
-```powershell
-irm https://raw.githubusercontent.com/j46871417-ui/Antigravity-Localizer/main/install.ps1 | iex
-```
-
-### 3. Через `install.bat`:
-Скачайте `install.bat` и запустите двойным кликом.
+## ⚡ Установка:
+1. Скачайте **`{versioned_exe_name}`** ниже.
+2. Запустите и нажмите **«Установить русификатор»**.
 """
 
-# 5. Create new GitHub Release
 req_data = {
     "tag_name": new_tag,
     "name": release_title,
@@ -88,52 +141,35 @@ req = urllib.request.Request(
     headers=headers,
     method='POST'
 )
-
 res = json.loads(urllib.request.urlopen(req).read().decode('utf-8'))
 release_id = res['id']
 print(f"Created new GitHub Release: {res['name']} (ID: {release_id}, Tag: {res['tag_name']})")
 
-# 6. Upload AntigravityLocalizer.exe
-exe_path = os.path.join(repo_root, "AntigravityLocalizer.exe")
-if os.path.exists(exe_path):
-    print("Uploading AntigravityLocalizer.exe...")
-    with open(exe_path, "rb") as f:
-        exe_bytes = f.read()
-    upload_url = f"https://uploads.github.com/repos/j46871417-ui/Antigravity-Localizer/releases/{release_id}/assets?name=AntigravityLocalizer.exe"
+def upload_asset(path, name):
+    print(f"Uploading {name}...")
+    with open(path, "rb") as f:
+        data = f.read()
+    upload_url = f"https://uploads.github.com/repos/j46871417-ui/Antigravity-Localizer/releases/{release_id}/assets?name={name}"
     req_upload = urllib.request.Request(
         upload_url,
-        data=exe_bytes,
+        data=data,
         headers={
             'Authorization': f'token {token}',
             'User-Agent': 'Python',
             'Content-Type': 'application/octet-stream',
-            'Content-Length': str(len(exe_bytes))
+            'Content-Length': str(len(data))
         },
         method='POST'
     )
     res_up = json.loads(urllib.request.urlopen(req_upload).read().decode('utf-8'))
-    print("Uploaded AntigravityLocalizer.exe successfully! Size:", res_up.get("size"))
+    print(f"[+] Uploaded {name} ({res_up.get('size')} bytes)")
 
-# 7. Upload install.bat
+# Upload versioned exe and standard exe and install.bat
+upload_asset(versioned_exe_path, versioned_exe_name)
+upload_asset(standard_exe_path, "AntigravityLocalizer.exe")
 bat_path = os.path.join(repo_root, "install.bat")
 if os.path.exists(bat_path):
-    print("Uploading install.bat...")
-    with open(bat_path, "rb") as f:
-        bat_bytes = f.read()
-    upload_url = f"https://uploads.github.com/repos/j46871417-ui/Antigravity-Localizer/releases/{release_id}/assets?name=install.bat"
-    req_upload = urllib.request.Request(
-        upload_url,
-        data=bat_bytes,
-        headers={
-            'Authorization': f'token {token}',
-            'User-Agent': 'Python',
-            'Content-Type': 'application/x-bat',
-            'Content-Length': str(len(bat_bytes))
-        },
-        method='POST'
-    )
-    res_up = json.loads(urllib.request.urlopen(req_upload).read().decode('utf-8'))
-    print("Uploaded install.bat successfully! Size:", res_up.get("size"))
+    upload_asset(bat_path, "install.bat")
 
 # 8. Notify Telegram Group / Topic
 try:
@@ -154,16 +190,16 @@ try:
 • Автоматический перевод действий («Работал 15 с», «Редактирование» и др.)
 
 📦 <b>GitHub Release:</b> <a href="https://github.com/j46871417-ui/Antigravity-Localizer/releases/tag/{new_tag}">v{new_tag}</a>
-💾 <b>Файл установщика прикреплён ниже 👇</b>"""
+💾 <b>Файл установщика: <code>{versioned_exe_name}</code> прикреплён ниже 👇</b>"""
 
         tg_notifier.send_message(tg_token, tg_chat_id, tg_text, tg_thread_id)
-        if os.path.exists(exe_path):
-            print("[*] Загрузка AntigravityLocalizer.exe в Telegram...")
+        if os.path.exists(versioned_exe_path):
+            print(f"[*] Загрузка {versioned_exe_name} в Telegram...")
             tg_notifier.send_document(
                 tg_token,
                 tg_chat_id,
-                exe_path,
-                caption=f"🚀 <b>AntigravityLocalizer.exe v{new_tag}</b>\n(Автономный установщик русификатора)",
+                versioned_exe_path,
+                caption=f"🚀 <b>{versioned_exe_name}</b>\n(Автономный установщик русификатора)",
                 thread_id=tg_thread_id
             )
             print("[+] Файл и анонс успешно опубликованы в Telegram!")

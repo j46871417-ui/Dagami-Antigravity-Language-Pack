@@ -13,7 +13,7 @@ dist/
 *.spec
 
 # Compiled executable
-AntigravityLocalizer.exe
+AntigravityLocalizer*.exe
 payload.zip
 
 # Backups created by the localizer
