@@ -24,7 +24,7 @@ namespace AntigravityLocalizer
 {
     public static class AppConfig
     {
-        public const string Version = "0.0.10";
+        public const string Version = "0.0.11";
     }
 
     static class Program
