@@ -12,6 +12,7 @@ dist/
 
 # Compiled executable
 AntigravityLocalizer.exe
+payload.zip
 
 # Backups created by the localizer
 *.bak.original

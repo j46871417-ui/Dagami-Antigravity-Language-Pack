@@ -394,14 +394,14 @@ namespace AntigravityLocalizer
             header.BackColor = Color.FromArgb(24, 43, 73);
 
             Label title = new Label();
-            title.Text = "Google Antigravity — Русификатор";
+            title.Text = "Google Antigravity — Русификатор v0.0.5";
             title.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
             title.ForeColor = Color.White;
             title.Location = new Point(20, 12);
             title.AutoSize = true;
 
             Label subtitle = new Label();
-            subtitle.Text = "Полная русификация Antigravity 2.0 Desktop и Antigravity IDE (950+ фраз)";
+            subtitle.Text = "Русификация интерфейса (950+ фраз) и перевод размышлений на лету!";
             subtitle.Font = new Font("Segoe UI", 9F);
             subtitle.ForeColor = Color.FromArgb(180, 205, 235);
             subtitle.Location = new Point(21, 38);
