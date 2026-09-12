@@ -4,6 +4,8 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+.env
+*.env
 
 # PyInstaller / build artifacts
 build/
