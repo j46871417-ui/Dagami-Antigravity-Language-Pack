@@ -14,7 +14,8 @@ param(
     [switch]$Install,
     [switch]$Uninstall,
     [string]$AppDir = "$env:LOCALAPPDATA\Programs\antigravity",
-    [string]$IdeDir = "$env:LOCALAPPDATA\Programs\Antigravity IDE"
+    [string]$IdeDir = "$env:LOCALAPPDATA\Programs\Antigravity IDE",
+    [string]$ExpectedHash = ""
 )
 
 $Host.UI.RawUI.WindowTitle = "Google Antigravity - Русификатор"
@@ -146,19 +147,32 @@ if ([string]::IsNullOrWhiteSpace($ScriptDir) -or (-not (Test-Path "$ScriptDir\re
 }
 
 $TempDir = $null
-if ($IsRemote) {
-    Write-Host "[*] Загрузка актуальных файлов локализации с GitHub..." -ForegroundColor Cyan
-    $ZipUrl = "https://github.com/j46871417-ui/Antigravity-Localizer/archive/refs/heads/main.zip"
-    $TempDir = Join-Path $env:TEMP ("antigravity_ru_" + [guid]::NewGuid().ToString().Substring(0, 8))
-    $TempZip = "$TempDir.zip"
+$TempZip = $null
 
-    New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
-    try {
+try {
+    if ($IsRemote) {
+        Write-Host "[*] Загрузка актуальных файлов локализации с GitHub..." -ForegroundColor Cyan
+        $ZipUrl = "https://github.com/j46871417-ui/Antigravity-Localizer/archive/refs/heads/main.zip"
+        $TempDir = Join-Path $env:TEMP ("antigravity_ru_" + [guid]::NewGuid().ToString().Substring(0, 8))
+        $TempZip = "$TempDir.zip"
+
+        New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         $oldProgress = $ProgressPreference
         $ProgressPreference = 'SilentlyContinue'
         Invoke-WebRequest -Uri $ZipUrl -OutFile $TempZip -UseBasicParsing
         $ProgressPreference = $oldProgress
+
+        # Проверка целостности и подлинности архива по алгоритму SHA256 перед распаковкой
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedHash)) {
+            Write-Host "[*] Проверка контрольной суммы SHA256 архива..." -ForegroundColor Cyan
+            $actualHash = (Get-FileHash -Path $TempZip -Algorithm SHA256).Hash
+            if ($actualHash -ne $ExpectedHash.ToUpper()) {
+                throw "Нарушение безопасности: SHA256 скачанного архива ($actualHash) не совпадает с ожидаемым ($ExpectedHash)!"
+            }
+            Write-Host "[+] Контрольная сумма SHA256 успешно подтверждена." -ForegroundColor Green
+        }
+
         Expand-Archive -Path $TempZip -DestinationPath $TempDir -Force
         
         $extractedRoot = Get-ChildItem -Path $TempDir -Directory | Select-Object -First 1
@@ -172,28 +186,43 @@ if ($IsRemote) {
             throw "Не удалось обнаружить распакованные ресурсы в загруженном архиве."
         }
         Write-Host "[+] Файлы успешно загружены." -ForegroundColor Green
-    } catch {
-        Write-Host "[-] Ошибка загрузки архива: $_" -ForegroundColor Red
-        if ($TempDir -and (Test-Path $TempDir)) { Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue }
-        if ($TempZip -and (Test-Path $TempZip)) { Remove-Item -Path $TempZip -Force -ErrorAction SilentlyContinue }
-        return
     }
-}
 
-# Закрытие запущенных процессов
-$procs = Get-Process -Name "Antigravity", "Antigravity IDE" -ErrorAction SilentlyContinue
-if ($procs) {
-    Write-Host "[*] Закрытие запущенных процессов Antigravity..." -ForegroundColor Yellow
-    $procs | Stop-Process -Force -ErrorAction SilentlyContinue
-    $timeout = 10
-    while ((Get-Process -Name "Antigravity", "Antigravity IDE" -ErrorAction SilentlyContinue) -and ($timeout -gt 0)) {
-        Start-Sleep -Milliseconds 500
-        $timeout--
+    # Закрытие запущенных процессов с контрольным polling
+    $procs = Get-Process -Name "Antigravity", "Antigravity IDE" -ErrorAction SilentlyContinue
+    if ($procs) {
+        Write-Host "[*] Закрытие запущенных процессов Antigravity..." -ForegroundColor Yellow
+        $procs | Stop-Process -Force -ErrorAction SilentlyContinue
+        $timeout = 10
+        while ((Get-Process -Name "Antigravity", "Antigravity IDE" -ErrorAction SilentlyContinue) -and ($timeout -gt 0)) {
+            Start-Sleep -Milliseconds 500
+            $timeout--
+        }
     }
-    Start-Sleep -Seconds 1
-}
 
-try {
+    # Polling проверки блокировки app.asar перед записью
+    if ($HasDesktop -and (Test-Path $TargetAsar)) {
+        $timeout = 10
+        $unlocked = $false
+        while (($timeout -gt 0) -and (-not $unlocked)) {
+            try {
+                $fileStream = [System.IO.File]::Open($TargetAsar, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+                if ($fileStream) {
+                    $fileStream.Close()
+                    $fileStream.Dispose()
+                    $unlocked = $true
+                    break
+                }
+            } catch {
+                Start-Sleep -Milliseconds 500
+                $timeout--
+            }
+        }
+        if (-not $unlocked) {
+            throw "Файл app.asar заблокирован другим процессом. Закройте Antigravity вручную и повторите попытку."
+        }
+    }
+
     # 1. Desktop русификация
     if ($HasDesktop) {
         if (-not (Test-Path $BackupAsar)) {
@@ -244,9 +273,14 @@ try {
                         }
                     }
                     $jsonContent | ConvertTo-Json -Depth 20 | Set-Content -Path $idePkg -Encoding UTF8
+                    # Валидация записанного JSON
+                    Get-Content -Path $idePkg -Raw -Encoding UTF8 | ConvertFrom-Json | Out-Null
                     Write-Host "[+] Команды Antigravity IDE переведены на русский язык!" -ForegroundColor Green
                 } catch {
-                    Write-Host "[!] Предупреждение при обновлении package.json: $_" -ForegroundColor Yellow
+                    Write-Host "[!] Предупреждение при обновлении package.json: $_. Откат к оригиналу." -ForegroundColor Yellow
+                    if (Test-Path $idePkgBak) {
+                        Copy-Item -Path $idePkgBak -Destination $idePkg -Force
+                    }
                 }
             }
         }
@@ -256,15 +290,18 @@ try {
     Write-Host "==========================================================" -ForegroundColor Green
     Write-Host "  Русификация Google Antigravity успешно установлена!     " -ForegroundColor Green
     Write-Host "==========================================================" -ForegroundColor Green
-    Write-Host "• Переведено более 950 элементов интерфейса, настроек и меню." -ForegroundColor White
+    Write-Host "• Переведено более 2 200 элементов интерфейса, настроек и меню." -ForegroundColor White
     Write-Host "• Все ваши проекты, чаты, сессии и ключи полностью сохранены." -ForegroundColor White
     Write-Host "• Запустите Antigravity, чтобы работать в полностью русском интерфейсе!" -ForegroundColor White
     Write-Host "• Сообщество и группа в Telegram: https://t.me/+8qU7020rMF84OWNi" -ForegroundColor Cyan
     Write-Host "• Для отката запустите скрипт с параметром -Uninstall" -ForegroundColor Gray
     Write-Host ""
-} catch {
+}
+catch {
     Write-Host "[-] Ошибка установки: $_" -ForegroundColor Red
-} finally {
+}
+finally {
+    # Гарантированная очистка временных файлов при любом сценарии выхода
     if ($TempDir -and (Test-Path $TempDir)) {
         Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue
     }

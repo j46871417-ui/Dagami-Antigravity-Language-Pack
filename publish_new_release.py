@@ -27,7 +27,7 @@ repo_api = 'https://api.github.com/repos/j46871417-ui/Antigravity-Localizer'
 if len(sys.argv) > 1:
     new_tag = sys.argv[1].strip()
 else:
-    new_tag = "0.0.12"
+    new_tag = "0.0.13"
 
 print(f"[*] Target release tag: {new_tag}")
 
@@ -39,6 +39,16 @@ with open(prog_cs_path, "r", encoding="utf-8") as f:
 prog_content = re.sub(
     r'public const string Version = "[^"]+";',
     f'public const string Version = "{new_tag}";',
+    prog_content
+)
+prog_content = re.sub(
+    r'\[assembly: AssemblyVersion\("[^"]+"\)]',
+    f'[assembly: AssemblyVersion("{new_tag}.0")]',
+    prog_content
+)
+prog_content = re.sub(
+    r'\[assembly: AssemblyFileVersion\("[^"]+"\)]',
+    f'[assembly: AssemblyFileVersion("{new_tag}.0")]',
     prog_content
 )
 with open(prog_cs_path, "w", encoding="utf-8") as f:
@@ -117,8 +127,20 @@ else:
     print("[!] Warning: Inno Setup ISCC.exe not found!")
 
 # 7. Commit and push git tag
-subprocess.run(["git", "add", "Program.cs", "setup.iss", "resources/web_bundle_ru/main.js", "resources/web_bundle_ru/i18n-ru.js", "publish_new_release.py"], cwd=repo_root, check=False)
-subprocess.run(["git", "commit", "-m", f"chore: release v{new_tag} (live AI response translation, tool action cards localization, settings nav & model levels)"], cwd=repo_root, check=False)
+subprocess.run([
+    "git", "add",
+    "Program.cs",
+    "setup.iss",
+    ".gitignore",
+    "antigravity_localizer.py",
+    "install.ps1",
+    ".github/workflows/build.yml",
+    "publish_new_release.py"
+], cwd=repo_root, check=False)
+subprocess.run([
+    "git", "commit", "-m",
+    f"fix(security): atomic ASAR write, safe JS string replacement, JSON validation, process polling, and install.ps1 SHA256 (v{new_tag})"
+], cwd=repo_root, check=False)
 subprocess.run(["git", "push", "origin", "main"], cwd=repo_root, check=False)
 
 print(f"Creating git tag {new_tag}...")
@@ -126,35 +148,50 @@ subprocess.run(["git", "tag", "-a", new_tag, "-m", f"Release {new_tag}"], cwd=re
 subprocess.run(["git", "push", "origin", new_tag], cwd=repo_root, check=False)
 
 # 8. Create GitHub Release
-release_title = f"Google Antigravity Localizer v{new_tag}"
-release_body = f"""# Google Antigravity Localizer v{new_tag}
+release_title = f"Google Antigravity Localizer v{new_tag} - Security & Reliability Patch"
+release_body = f"""# Google Antigravity Localizer v{new_tag} — Security & Reliability Patch
 
-Комплексный автономный русификатор для экосистемы **Google Antigravity**:
-- **Перевод ответов ИИ на лету (AI Response Translation)**:
-  - Добавлена функция мгновенного перевода основного текста ответов ассистента непосредственно в чате (не только блока размышлений).
-  - Умное определение языка: если ответ модели уже дан на русском языке, панель не отвлекает пользователя.
-  - При ответах на английском языке доступен удобный тулбар вверху ответа: переключатель **`[⚡ Авто: ВКЛ/ВЫКЛ]`** и кнопка **`[🌐 RU / EN]`** для моментального просмотра оригинального текста.
-  - Полное бережное сохранение блоков кода (` ```lang...``` `) и инлайн-кода (` `code` `) без искажения синтаксиса и отступов.
-  - Мгновенное переключение благодаря локальному кэшированию.
-- **Локализация карточек действий и префиксов инструментов (Action Cards)**:
-  - Полный перевод статусов действий в чате: `Analyzed` («Проанализировано»), `Analyzing` («Анализ...»), `Read` («Прочитано»), `Reading` («Чтение...»), `Edited` («Отредактировано»), `Editing` («Редактирование...»), `Executed` («Выполнено»), `Executing` («Выполнение...»), `Searched` («Найдено»), `Searching` («Поиск...»), `Tested` («Протестировано»), `Testing` («Тестирование...»), `Built` («Собрано»), `Building` («Сборка...») и др.
-  - Перевод всех браузерных действий (открытие URL, клики по элементам, снятие скриншотов, логи консоли, извлечение DOM).
-- **Навигация настроек и селектор моделей**:
-  - Полная русификация боковых вкладок настроек («Общие», «Внешний вид», «Модели», «Настройки агента», «Горячие клавиши», «Браузер», «Уведомления», «Редактор» и др.).
-  - Устранен остаток `Medium` в селекторе моделей — теперь корректно отображаются: «Экономный», «Средний», «Высокая точность».
-  - В словарь добавлено 170+ новых фраз интерфейса (ошибки выполнения инструментов, диффы, управление безопасностью браузера).
+Критическое обновление безопасности и стабильности русификатора **Google Antigravity**:
+
+### 🛡️ Безопасность и целостность данных:
+- **Атомарная запись архивов ASAR (`write_asar_atomic`)**:
+  - Исключена вероятность повреждения `app.asar` при внезапном сбое питания или обрыве процесса: запись теперь ведется во временный файл в том же томе файловой системы с вызовом `os.fsync`.
+  - Замена файла производится атомарной операцией `os.replace`.
+  - Добавлена предварительная валидация расчетного размера архива и строгая проверка UTF-8 перед модификацией файлов.
+  - При возникновении ошибки выполняется гарантированный автоматический откат (rollback) к исходному бэкапу.
+
+- **Безопасная контекстно-зависимая замена строковых литералов в JS**:
+  - Внедрен regex-парсер с проверкой типов кавычек и границ выражений (`replace_js_string_literals`).
+  - Защищены ключи объектов JS/JSON (`"key":`), свойства объектов (`obj.key`), вызовы функций и методов.
+  - Добавлен черный список системных идентификаторов (URL, пути, команды `vscode.*`, `antigravity.*`, расширения файлов), предотвращающий их случайную модификацию.
+
+- **Строгая пост-патч валидация JSON/JSONC**:
+  - Реализовано безопасное удаление комментариев (`//` и `/* */`) перед валидацией VS Code-конфигов (`strip_json_comments`).
+  - После модификации `argv.json` и `package.json` производится обязательный обратный парсинг (`json.loads` / `ConvertFrom-Json`). При ошибках синтаксиса файл немедленно восстанавливается из резервной копии.
+
+- **Надежный polling процессов и проверка файловых блокировок**:
+  - Заменены жесткие задержки `sleep` на активный опрос процессов (`tasklist` / `Get-Process`) с таймаутом до 5 секунд.
+  - Добавлена функция `wait_for_files_unlocked`, ожидающая освобождения файловых дескрипторов приложением до 10 секунд перед операциями записи.
+
+- **Усиление безопасности PowerShell-установщика (`install.ps1`)**:
+  - Добавлен параметр `$ExpectedHash` для проверки подлинности и целостности скачиваемого ZIP-архива по алгоритму **SHA256** перед распаковкой.
+  - Весь процесс обернут в корневой блок `try ... finally`, гарантирующий удаление временных файлов и директорий при любом исходе.
+  - Добавлен polling проверки блокировки `app.asar` перед копированием.
+
+- **Синхронизация CI/CD**:
+  - GitHub Actions Workflow обновлен до актуального **Python 3.13**.
 
 ---
 
 ## 💬 Сообщество и группа в Telegram
 Обсуждение программ автора и сообщества:  
-👉 **[Вступить в Telegram-группу](https://t.me/+8qU7020rMF84OWNi)**
+👉 **[Вступить в Telegram-группу](https://t.me/+8qU7020rMF84OWNi)** (Тема «Разработочная»)
 
 ---
 
 ## ⚡ Установка:
 1. Скачайте **`{installer_exe_name}`** ниже.
-2. Запустите, нажмите «Далее» — установщик автоматически закроет запущенный Antigravity, распакует компоненты русификации и откроет окно русификатора.
+2. Запустите установщик — он корректно закроет процессы Antigravity, проверит блокировки и установит обновленные компоненты.
 """
 
 req_data = {
@@ -213,14 +250,16 @@ try:
         tg_client = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(tg_client)
 
-        print("[*] Отправка анонса и файла в Telegram через tg_client...")
-        tg_text = f"""🚀 <b>Вышел новый релиз Google Antigravity Localizer v{new_tag}!</b>
+        print("[*] Отправка анонса и файла в Telegram через tg_client (тема «Разработочная»)...")
+        tg_text = f"""🛡️ <b>Вышел патч безопасности Google Antigravity Localizer v{new_tag}!</b>
 
-✨ <b>Что нового в v{new_tag}:</b>
-• <b>Перевод ответов ИИ на лету</b>: добавлен встроенный перевод основного текста ответов ассистента в чате с переключателями [⚡ Авто: ВКЛ/ВЫКЛ] и [🌐 RU / EN] (с защитой блоков кода и подсветки синтаксиса)
-• <b>Локализация карточек действий и инструментов</b>: «Проанализировано» (Analyzed), «Анализ...» (Analyzing), «Прочитано» (Read), «Чтение...» (Reading), «Отредактировано» (Edited), «Выполнено» (Executed), «Поиск...» (Searching) и все браузерные операции
-• <b>Навигация настроек и уровни моделей</b>: переведены все разделы боковой панели настроек и исправлен остаток «Medium» в селекторе моделей («Экономный», «Средний», «Высокая точность»)
-• <b>Расширение словаря</b>: +170 новых строк интерфейса (ошибки инструментов, диффы, управление безопасностью)
+✨ <b>Ключевые исправления безопасности и стабильности:</b>
+• <b>Атомарная запись ASAR</b>: запись в temp-файл с <code>os.fsync</code> и атомарной заменой <code>os.replace</code>, защита от повреждения архивов и автоматический rollback
+• <b>Контекстная замена JS-строк</b>: защита ключей объектов (<code>"key":</code>), свойств (<code>obj.key</code>) и методов; фильтрация системных идентификаторов по черному списку
+• <b>Пост-патч валидация JSON/JSONC</b>: поддержка комментариев в <code>argv.json</code> и обязательная обратная валидация с откатом при сбое
+• <b>Надежный polling процессов</b>: активное ожидание закрытия процессов и снятия файловых блокировок (до 10с)
+• <b>Безопасность инсталлятора PowerShell</b>: проверка контрольной суммы архива SHA256 и гарантированная очистка временных папок в блоке <code>finally</code>
+• <b>CI/CD</b>: синхронизация с актуальным Python 3.13
 
 📦 <b>GitHub Release:</b> <a href="https://github.com/j46871417-ui/Antigravity-Localizer/releases/tag/{new_tag}">v{new_tag}</a>
 💾 <b>Установщик: <code>{installer_exe_name}</code> прикреплён ниже 👇</b>"""
@@ -230,7 +269,7 @@ try:
             print(f"[*] Загрузка {installer_exe_name} в Telegram...")
             tg_client.send_document(
                 installer_exe_path,
-                caption=f"🚀 <b>{installer_exe_name}</b>\n(Перевод ответов ИИ на лету + локализация действий и настроек)"
+                caption=f"🛡️ <b>{installer_exe_name}</b>\n(Патч безопасности и стабильности v{new_tag})"
             )
             print("[+] Файл и анонс успешно опубликованы в Telegram!")
     else:

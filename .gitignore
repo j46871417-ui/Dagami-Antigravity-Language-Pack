@@ -25,3 +25,5 @@ payload.zip
 .vscode/
 Thumbs.db
 desktop.ini
+*.cer
+

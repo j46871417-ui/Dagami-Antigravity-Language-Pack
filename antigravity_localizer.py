@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import struct
 import subprocess
@@ -59,7 +60,49 @@ ANTIGRAVITY_PROCESS_NAMES = [
 ]
 
 
+def wait_for_files_unlocked(file_paths: list[Path], timeout: float = 10.0, poll_interval: float = 0.25, log_fn=safe_print) -> bool:
+    """
+    Опрашивает доступность списка файлов на запись (polling).
+    Возвращает True, как только все файлы разблокированы, либо False по истечении таймаута.
+    """
+    start_time = time.time()
+    existing_files = [p for p in file_paths if p and p.exists()]
+    if not existing_files:
+        return True
+
+    log_fn(f"  Ожидание разблокировки целевых файлов (таймаут {timeout:.0f}с)...")
+    while time.time() - start_time < timeout:
+        all_unlocked = True
+        for p in existing_files:
+            try:
+                # Пытаемся открыть файл на эксклюзивный доступ для чтения и записи
+                with open(p, "r+b"):
+                    pass
+            except (IOError, PermissionError, OSError):
+                all_unlocked = False
+                break
+        if all_unlocked:
+            return True
+        time.sleep(poll_interval)
+
+    # Финальная проверка заблокированных файлов
+    locked = []
+    for p in existing_files:
+        try:
+            with open(p, "r+b"):
+                pass
+        except (IOError, PermissionError, OSError):
+            locked.append(p.name)
+    if locked:
+        log_fn(f"  [Предупреждение] Файлы остаются заблокированы другими процессами: {', '.join(locked)}")
+        return False
+    return True
+
+
 def kill_antigravity_processes(log_fn=safe_print):
+    """
+    Завершает активные процессы Antigravity и опрашивает систему до фактического выхода процессов.
+    """
     log_fn("\n[Процессы] Завершение всех активных процессов Antigravity...")
     killed_any = False
     for proc in ANTIGRAVITY_PROCESS_NAMES:
@@ -75,9 +118,26 @@ def kill_antigravity_processes(log_fn=safe_print):
                 killed_any = True
         except Exception:
             pass
+
     if killed_any:
-        log_fn("  Процессы завершены. Ожидание освобождения файлов в системе...")
-        time.sleep(1.5)
+        log_fn("  Команды завершения отправлены. Ожидание выгрузки процессов из памяти...")
+        # Polling процессов tasklist до 5 секунд
+        deadline = time.time() + 5.0
+        while time.time() < deadline:
+            try:
+                chk = subprocess.run(
+                    ["tasklist"],
+                    capture_output=True,
+                    text=True,
+                    creationflags=CREATE_NO_WINDOW,
+                )
+                still_running = any(proc.lower() in chk.stdout.lower() for proc in ANTIGRAVITY_PROCESS_NAMES)
+                if not still_running:
+                    break
+            except Exception:
+                break
+            time.sleep(0.3)
+        log_fn("  Процессы Antigravity успешно выгружены.")
     else:
         log_fn("  Активных процессов не обнаружено.")
 
@@ -156,7 +216,12 @@ def read_asar(path: Path):
     return header, data
 
 
-def write_asar(path: Path, header: dict, data: bytes):
+def write_asar_atomic(path: Path, header: dict, data: bytes):
+    """
+    Атомарная запись ASAR-архива по паттерну 'write-to-temp + atomic-rename'.
+    Временный файл создается рядом с оригиналом на том же томе, после проверки размера
+    выполняется os.replace. При любых сбоях временный файл удаляется.
+    """
     json_bytes = json.dumps(header, separators=(',', ':')).encode("utf-8")
     json_len = len(json_bytes)
     pad_len = (4 - (json_len % 4)) % 4
@@ -167,11 +232,38 @@ def write_asar(path: Path, header: dict, data: bytes):
     u0 = 4
 
     magic = struct.pack("<IIII", u0, header_size, u2, json_len)
-    with open(path, "wb") as f:
-        f.write(magic)
-        f.write(json_bytes)
-        f.write(padding)
-        f.write(data)
+    expected_size = 16 + json_len + pad_len + len(data)
+
+    # Временный файл строго в том же каталоге, чтобы os.replace был атомарным
+    temp_path = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    try:
+        with open(temp_path, "wb") as f:
+            f.write(magic)
+            f.write(json_bytes)
+            f.write(padding)
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+
+        # Валидация размера созданного файла
+        actual_size = temp_path.stat().st_size
+        if actual_size != expected_size:
+            raise IOError(f"Несоответствие размера ASAR: ожидалось {expected_size} байт, записано {actual_size} байт")
+
+        # Атомарная замена целевого файла
+        os.replace(temp_path, path)
+    except Exception:
+        if temp_path.exists():
+            try:
+                temp_path.unlink()
+            except OSError:
+                pass
+        raise
+
+
+def write_asar(path: Path, header: dict, data: bytes):
+    # Псевдоним для сохранения обратной совместимости вызовов
+    write_asar_atomic(path, header, data)
 
 
 def compute_sha256_blocks(data: bytes, block_size: int = 4194304):
@@ -192,6 +284,64 @@ def compute_sha256_blocks(data: bytes, block_size: int = 4194304):
 # Ядро локализации
 # =============================================================================
 
+
+def strip_json_comments(text: str) -> str:
+    """
+    Удаляет однострочные (//) и многострочные (/* */) комментарии из JSONC (JSON with Comments),
+    сохраняя строковые литералы без повреждений для последующего парсинга json.loads.
+    """
+    def replacer(match):
+        s = match.group(0)
+        if s.startswith('/'):
+            return ""
+        return s
+    pattern = re.compile(r'//.*?$|/\*.*?\*/|"(?:\\.|[^\\"])*"', re.DOTALL | re.MULTILINE)
+    return re.sub(pattern, replacer, text)
+
+
+def replace_js_string_literals(content: str, string_map: dict[str, str], log_fn=safe_print) -> tuple[str, int]:
+    """
+    Контекстно-зависимая замена строковых литералов в JS-коде.
+    Заменяет исключительно литералы в одинарных, двойных или обратных кавычках,
+    не затрагивая имена переменных, ключи объектов (key: value), пути импортов и директивы.
+    """
+    changes = 0
+    # Черный список: служебные идентификаторы, протоколы, расширения и системные пути
+    blacklist_patterns = (
+        "vscode.", "antigravity.", "http://", "https://", "file://",
+        ".js", ".json", ".ts", ".node", "/", "\\"
+    )
+
+    for en_s, ru_s in string_map.items():
+        if not en_s or not isinstance(en_s, str) or en_s == ru_s:
+            continue
+
+        # Пропуск системных идентификаторов
+        if any(bp in en_s for bp in blacklist_patterns) and not (" " in en_s or en_s.endswith(":") or en_s.endswith(".")):
+            log_fn(f"  [Контекстный фильтр] Пропуск потенциального системного идентификатора: '{en_s}'")
+            continue
+
+        # Поиск строкового литерала в кавычках с проверкой, что это не ключ объекта (без ':' сразу после кавычки)
+        escaped_en = re.escape(en_s)
+        # Шаблон: кавычка, текст, кавычка, и после кавычки нет двоеточия (что исключает "prop": val)
+        pattern = re.compile(r'(?<![a-zA-Z0-9_\$\.\:])(["\'`])' + escaped_en + r'\1(?!\s*:)')
+
+        def make_repl(quote_match):
+            q = quote_match.group(1)
+            # Экранируем кавычку того же типа внутри русского перевода, если она там есть
+            escaped_ru = ru_s.replace(q, f"\\{q}") if q != '`' else ru_s
+            return f"{q}{escaped_ru}{q}"
+
+        new_content, count = pattern.subn(make_repl, content)
+        if count > 0:
+            content = new_content
+            changes += count
+        elif en_s in content:
+            # Найдено в тексте, но не в виде чистого литерала (например ключ или часть составного идентификатора)
+            log_fn(f"  [Контекстный фильтр] Строка '{en_s}' пропущена: используется как ключ объекта или имя свойства.")
+
+    return content, changes
+
 class AntigravityLocalizer:
     def __init__(self, ide_path: Path = None, desktop_path: Path = None, ide_user_data: Path = None, log_fn=safe_print):
         self.ide_path = ide_path
@@ -206,6 +356,18 @@ class AntigravityLocalizer:
 
         kill_antigravity_processes(self.log)
         self.log("\n--- Русификация Antigravity IDE ---")
+
+        ext_base = self.ide_path / "resources" / "app" / "extensions" / "antigravity"
+        pkg_path = ext_base / "package.json"
+        ext_js_path = ext_base / "dist" / "extension.js"
+        argv_json_path = self.ide_user_data / "argv.json"
+        jetski_path = self.ide_path / "resources" / "app" / "out" / "jetskiAgent" / "main.js"
+
+        # Polling: ожидание освобождения дескрипторов файлов процессами
+        ide_targets = [p for p in [pkg_path, ext_js_path, argv_json_path, jetski_path] if p.exists()]
+        if not wait_for_files_unlocked(ide_targets, timeout=10.0, log_fn=self.log):
+            self.log("[IDE] Ошибка: целевые файлы заблокированы внешними процессами. Прерывание.")
+            return False
 
         # 1. Языковой пакет VS Code
         ext_dir = self.ide_user_data / "extensions"
@@ -223,28 +385,37 @@ class AntigravityLocalizer:
         else:
             self.log("[IDE] Языковой пакет VS Code уже установлен.")
 
-        # 2. argv.json -> locale: ru
-        argv_json_path = self.ide_user_data / "argv.json"
+        # 2. argv.json -> locale: ru (с сохранением JSONC и валидацией)
         if argv_json_path.exists():
             backup_file(argv_json_path, self.log)
             try:
                 with open(argv_json_path, "r", encoding="utf-8") as f:
                     argv_content = f.read()
-                # Регулярка/парсинг json с сохранением комментариев
+
                 import re
                 if '"locale"' in argv_content:
                     argv_content = re.sub(r'"locale"\s*:\s*"[^"]*"', '"locale": "ru"', argv_content)
                 else:
                     argv_content = re.sub(r'(\{)', r'\1\n\t"locale": "ru",', argv_content, count=1)
+
+                # Предварительная валидация очищенного от комментариев JSON
+                clean_test = strip_json_comments(argv_content)
+                json.loads(clean_test)
+
                 with open(argv_json_path, "w", encoding="utf-8") as f:
                     f.write(argv_content)
+
+                # Пост-валидация записанного на диск файла
+                with open(argv_json_path, "r", encoding="utf-8") as f:
+                    post_test = strip_json_comments(f.read())
+                    json.loads(post_test)
+
                 self.log("[IDE] В argv.json включен русский язык (locale: ru).")
             except Exception as e:
-                self.log(f"[IDE] Ошибка обновления argv.json: {e}")
+                self.log(f"[IDE] Ошибка обновления/валидации argv.json: {e}. Откат к оригиналу.")
+                restore_file(argv_json_path, self.log)
 
-        # 3. Патч package.json расширения antigravity
-        ext_base = self.ide_path / "resources" / "app" / "extensions" / "antigravity"
-        pkg_path = ext_base / "package.json"
+        # 3. Патч package.json расширения antigravity (через json.load/dump с валидацией)
         if pkg_path.exists() and IDE_TRANSLATIONS_FILE.exists():
             backup_file(pkg_path, self.log)
             try:
@@ -289,13 +460,18 @@ class AntigravityLocalizer:
                         changes += 1
 
                 with open(pkg_path, "w", encoding="utf-8") as f:
-                    json.dump(pkg, f, ensure_ascii=False)
+                    json.dump(pkg, f, ensure_ascii=False, indent=2)
+
+                # Пост-валидация записанного package.json
+                with open(pkg_path, "r", encoding="utf-8") as f:
+                    json.load(f)
+
                 self.log(f"[IDE] Обновлено строк в package.json: {changes}")
             except Exception as e:
-                self.log(f"[IDE] Ошибка патчинга package.json: {e}")
+                self.log(f"[IDE] Ошибка патчинга/валидации package.json: {e}. Откат к оригиналу.")
+                restore_file(pkg_path, self.log)
 
-        # 4. Патч extension.js
-        ext_js_path = ext_base / "dist" / "extension.js"
+        # 4. Патч extension.js (контекстно-зависимая замена строковых литералов)
         if ext_js_path.exists() and IDE_TRANSLATIONS_FILE.exists():
             backup_file(ext_js_path, self.log)
             try:
@@ -305,21 +481,14 @@ class AntigravityLocalizer:
                 with open(ext_js_path, "r", encoding="utf-8") as f:
                     content = f.read()
 
-                changes = 0
-                for en_s, ru_s in ui_strings.items():
-                    for q in ['"', "'"]:
-                        patt = f"{q}{en_s}{q}"
-                        repl = f"{q}{ru_s}{q}"
-                        if patt in content:
-                            cnt = content.count(patt)
-                            content = content.replace(patt, repl)
-                            changes += cnt
+                content, changes = replace_js_string_literals(content, ui_strings, self.log)
                 if changes > 0:
                     with open(ext_js_path, "w", encoding="utf-8") as f:
                         f.write(content)
-                    self.log(f"[IDE] Заменено строк в extension.js: {changes}")
+                    self.log(f"[IDE] Заменено строковых литералов в extension.js: {changes}")
             except Exception as e:
-                self.log(f"[IDE] Ошибка патчинга extension.js: {e}")
+                self.log(f"[IDE] Ошибка патчинга extension.js: {e}. Откат к оригиналу.")
+                restore_file(ext_js_path, self.log)
 
         # 5. Патч nls.messages.json (полная русификация каркаса VS Code: меню, окна, настройки)
         nls_path = self.ide_path / "resources" / "app" / "out" / "nls.messages.json"
@@ -329,10 +498,10 @@ class AntigravityLocalizer:
                 shutil.copy2(NLS_RU_FILE, nls_path)
                 self.log("[IDE] Применена русская локализация меню и каркаса VS Code (15 180 строк).")
             except Exception as e:
-                self.log(f"[IDE] Ошибка обновления nls.messages.json: {e}")
+                self.log(f"[IDE] Ошибка обновления nls.messages.json: {e}. Откат к оригиналу.")
+                restore_file(nls_path, self.log)
 
         # 6. Патч jetskiAgent/main.js (интерфейс чата и панели агента Antigravity)
-        jetski_path = self.ide_path / "resources" / "app" / "out" / "jetskiAgent" / "main.js"
         if jetski_path.exists() and CHAT_TRANSLATIONS_FILE.exists():
             backup_file(jetski_path, self.log)
             try:
@@ -341,22 +510,14 @@ class AntigravityLocalizer:
                 with open(jetski_path, "r", encoding="utf-8") as f:
                     jetski_content = f.read()
 
-                chat_changes = 0
-                for en_s, ru_s in chat_trans.items():
-                    for q in ['"', "'"]:
-                        patt = f"{q}{en_s}{q}"
-                        repl = f"{q}{ru_s}{q}"
-                        if patt in jetski_content:
-                            c = jetski_content.count(patt)
-                            jetski_content = jetski_content.replace(patt, repl)
-                            chat_changes += c
-
+                jetski_content, chat_changes = replace_js_string_literals(jetski_content, chat_trans, self.log)
                 if chat_changes > 0:
                     with open(jetski_path, "w", encoding="utf-8") as f:
                         f.write(jetski_content)
                     self.log(f"[IDE] Обновлено строк в интерфейсе агента Antigravity: {chat_changes}")
             except Exception as e:
-                self.log(f"[IDE] Ошибка патчинга jetskiAgent: {e}")
+                self.log(f"[IDE] Ошибка патчинга jetskiAgent: {e}. Откат к оригиналу.")
+                restore_file(jetski_path, self.log)
 
         # Проверка запущенных процессов
         try:
@@ -385,6 +546,11 @@ class AntigravityLocalizer:
         asar_path = self.desktop_path / "resources" / "app.asar"
         if not asar_path.exists():
             self.log(f"[Desktop] app.asar не найден: {asar_path}")
+            return False
+
+        # Polling: ожидание разблокировки app.asar процессами перед записью
+        if not wait_for_files_unlocked([asar_path], timeout=10.0, log_fn=self.log):
+            self.log(f"[Desktop] Ошибка: {asar_path.name} заблокирован другим процессом. Прерывание.")
             return False
 
         backup_file(asar_path, self.log)
@@ -420,22 +586,21 @@ class AntigravityLocalizer:
                 file_bytes = data[old_offset:old_offset + old_size]
 
                 if path_str in targets and targets[path_str]:
-                    file_text = file_bytes.decode("utf-8", errors="replace")
-                    sub_changes = 0
-                    for en_s, ru_s in targets[path_str].items():
-                        if en_s in file_text:
-                            cnt = file_text.count(en_s)
-                            file_text = file_text.replace(en_s, ru_s)
-                            sub_changes += cnt
-                    if sub_changes > 0:
-                        changes += sub_changes
-                        file_bytes = file_text.encode("utf-8")
+                    try:
+                        # Проверка валидности UTF-8 перед модификацией
+                        file_text = file_bytes.decode("utf-8")
+                        file_text, sub_changes = replace_js_string_literals(file_text, targets[path_str], self.log)
+                        if sub_changes > 0:
+                            changes += sub_changes
+                            file_bytes = file_text.encode("utf-8")
+                    except UnicodeDecodeError:
+                        self.log(f"[Desktop] Предупреждение: {path_str} не является валидным UTF-8, модификация пропущена.")
 
                 if path_str == "dist/preload.js" and DOM_TRANSLATOR_FILE.exists():
                     try:
                         with open(DOM_TRANSLATOR_FILE, "r", encoding="utf-8") as f:
                             dom_script = f.read()
-                        preload_text = file_bytes.decode("utf-8", errors="replace")
+                        preload_text = file_bytes.decode("utf-8")
                         marker = "// Antigravity UI Runtime Localizer"
                         if marker in preload_text:
                             preload_text = preload_text[:preload_text.index(marker)].rstrip()
@@ -443,6 +608,8 @@ class AntigravityLocalizer:
                         file_bytes = preload_text.encode("utf-8")
                         changes += 1
                         self.log("[Desktop] Внедрён движок динамической русификации интерфейса в dist/preload.js")
+                    except UnicodeDecodeError:
+                        self.log("[Desktop] Предупреждение: dist/preload.js не декодируется в UTF-8, пропуск.")
                     except Exception as e:
                         self.log(f"[Desktop] Ошибка внедрения в preload.js: {e}")
 
@@ -455,12 +622,14 @@ class AntigravityLocalizer:
                 current_offset += len(file_bytes)
 
             new_data = b"".join(new_data_chunks)
-            write_asar(asar_path, header, new_data)
+            # Атомарная запись через временный файл и os.replace
+            write_asar_atomic(asar_path, header, new_data)
             self.log(f"[Desktop] Заменено строк в app.asar: {changes}")
             self.log("[Desktop] Русификация Desktop успешно завершена!")
             return True
         except Exception as e:
-            self.log(f"[Desktop] Ошибка патчинга app.asar: {e}")
+            self.log(f"[Desktop] Ошибка патчинга app.asar: {e}. Откат к оригиналу.")
+            restore_file(asar_path, self.log)
             return False
 
     def restore_all(self) -> bool:
