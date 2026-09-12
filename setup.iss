@@ -1,5 +1,5 @@
 #define MyAppName "Google Antigravity Localizer"
-#define MyAppVersion "0.0.7"
+#define MyAppVersion "0.0.8"
 #define MyAppPublisher "Antigravity Open Source Community"
 #define MyAppURL "https://github.com/j46871417-ui/Antigravity-Localizer"
 
@@ -15,7 +15,7 @@ DefaultDirName={localappdata}\Programs\antigravity
 DisableDirPage=no
 DirExistsWarning=no
 DisableProgramGroupPage=yes
-OutputBaseFilename=AntigravityLocalizer_v0.0.7
+OutputBaseFilename=AntigravityLocalizer_v0.0.8
 OutputDir=.
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -24,10 +24,10 @@ PrivilegesRequired=lowest
 CloseApplications=yes
 CloseApplicationsFilter=Antigravity*.exe
 UninstallDisplayName={#MyAppName} (Русификатор)
-VersionInfoVersion=0.0.7.0
+VersionInfoVersion=0.0.8.0
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=Google Antigravity Russian Localization Suite
-VersionInfoProductVersion=0.0.7.0
+VersionInfoProductVersion=0.0.8.0
 VersionInfoProductName={#MyAppName}
 VersionInfoCopyright=Copyright (c) 2026 Antigravity Open Source Community
 
@@ -39,6 +39,14 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Source: "resources\app.asar"; DestDir: "{app}\resources"; Flags: ignoreversion; BeforeInstall: BackupOriginalAsar
 Source: "resources\web_bundle_ru\*"; DestDir: "{app}\resources\web_bundle_ru"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "translations\ide_strings.json"; DestDir: "{app}\translations"; Flags: ignoreversion
+; GUI Localizer
+Source: "AntigravityLocalizer.exe"; DestDir: "{app}"; Flags: ignoreversion
+
+[Icons]
+Name: "{autodesktop}\Google Antigravity Русификатор"; Filename: "{app}\AntigravityLocalizer.exe"
+
+[Run]
+Filename: "{app}\AntigravityLocalizer.exe"; Description: "Запустить Google Antigravity Русификатор"; Flags: postinstall nowait
 
 [Code]
 procedure BackupOriginalAsar();
@@ -59,6 +67,7 @@ var
   IdePath: String;
   PkgJsonPath: String;
   PkgBackup: String;
+  ResultCode: Integer;
 begin
   if CurStep = ssPostInstall then
   begin
@@ -76,6 +85,9 @@ begin
         CopyFile(PkgJsonPath, PkgBackup, False);
       end;
     end;
+
+    // Auto-launch the GUI localizer window immediately after unpacking!
+    Exec(ExpandConstant('{app}\AntigravityLocalizer.exe'), '', '', SW_SHOW, ewNoWait, ResultCode);
   end;
 end;
 

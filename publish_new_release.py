@@ -35,7 +35,7 @@ else:
         parts[-1] += 1
         new_tag = '.'.join(str(x) for x in parts)
     else:
-        new_tag = "0.0.6"
+        new_tag = "0.0.8"
 
 print(f"[*] Target release tag: {new_tag}")
 
@@ -71,22 +71,32 @@ with zipfile.ZipFile(payload_zip_path, "w", zipfile.ZIP_DEFLATED) as z:
         z.write(ide_json, "translations/ide_strings.json")
 print("[+] payload.zip rebuilt")
 
-# 5. Helper function for Authenticode code signing
-def sign_file(file_path):
-    print(f"[*] Signing {os.path.basename(file_path)} with Authenticode...")
-    ps_cmd = f"""
-    $cert = Get-ChildItem Cert:\\CurrentUser\\My -CodeSigningCert | Where-Object {{ $_.Subject -like "*Antigravity*" }} | Select-Object -First 1
-    if (-not $cert) {{
-        $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=Antigravity Open Source Community, O=Antigravity Localizer, C=RU" -CertStoreLocation "Cert:\\CurrentUser\\My" -NotAfter (Get-Date).AddYears(5)
-    }}
-    Set-AuthenticodeSignature -FilePath "{file_path}" -Certificate $cert | Out-Null
-    $sig = Get-AuthenticodeSignature -FilePath "{file_path}"
-    Write-Host "Signed: $($sig.SignerCertificate.Subject)"
-    """
-    subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-Command", ps_cmd], check=True)
-    print(f"[+] Authenticode signature applied to {os.path.basename(file_path)}")
+# 5. Compile Standalone C# Executable FIRST (so Inno Setup can bundle it)
+standalone_exe_name = f"AntigravityLocalizer_Standalone_v{new_tag}.exe"
+standalone_exe_path = os.path.join(repo_root, standalone_exe_name)
+standard_exe_path = os.path.join(repo_root, "AntigravityLocalizer.exe")
 
-# 6. Build Inno Setup Installer (Primary: low antivirus detections, trusted PE stub)
+csc_path = r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+csc_cmd = [
+    csc_path,
+    "/nologo",
+    "/target:winexe",
+    "/optimize+",
+    f"/out:{standard_exe_path}",
+    f"/resource:{payload_zip_path},payload.zip",
+    "/r:System.dll",
+    "/r:System.Windows.Forms.dll",
+    "/r:System.Drawing.dll",
+    "/r:System.IO.Compression.dll",
+    "/r:System.IO.Compression.FileSystem.dll",
+    prog_cs_path
+]
+print(f"[*] Compiling AntigravityLocalizer.exe...")
+subprocess.run(csc_cmd, check=True)
+shutil.copy(standard_exe_path, standalone_exe_path)
+print(f"[+] Compiled successfully! Size: {os.path.getsize(standard_exe_path):,} bytes")
+
+# 6. Build Inno Setup Installer (Bundles AntigravityLocalizer.exe and auto-launches it!)
 iscc_paths = [
     r"C:\Users\gabov\AppData\Local\Programs\Inno Setup 6\ISCC.exe",
     r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
@@ -110,62 +120,34 @@ if iscc_exe:
         f.write(iss_content)
 
     subprocess.run([iscc_exe, iss_path], check=True)
-    sign_file(installer_exe_path)
-    print(f"[+] Inno Setup installer compiled & signed! Size: {os.path.getsize(installer_exe_path):,} bytes")
+    print(f"[+] Inno Setup installer compiled! Size: {os.path.getsize(installer_exe_path):,} bytes")
 else:
     print("[!] Warning: Inno Setup ISCC.exe not found!")
 
-# 7. Compile Standalone C# Executable (Portable single-file)
-standalone_exe_name = f"AntigravityLocalizer_Standalone_v{new_tag}.exe"
-standalone_exe_path = os.path.join(repo_root, standalone_exe_name)
-standard_exe_path = os.path.join(repo_root, "AntigravityLocalizer.exe")
-
-csc_path = r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
-csc_cmd = [
-    csc_path,
-    "/nologo",
-    "/target:winexe",
-    "/optimize+",
-    f"/out:{standalone_exe_path}",
-    f"/resource:{payload_zip_path},payload.zip",
-    "/r:System.dll",
-    "/r:System.Windows.Forms.dll",
-    "/r:System.Drawing.dll",
-    "/r:System.IO.Compression.dll",
-    "/r:System.IO.Compression.FileSystem.dll",
-    prog_cs_path
-]
-print(f"[*] Compiling standalone {standalone_exe_name}...")
-subprocess.run(csc_cmd, check=True)
-sign_file(standalone_exe_path)
-shutil.copy(standalone_exe_path, standard_exe_path)
-sign_file(standard_exe_path)
-print(f"[+] Standalone compiled & signed! Size: {os.path.getsize(standalone_exe_path):,} bytes")
-
-# 8. Commit and push git tag
+# 7. Commit and push git tag
 subprocess.run(["git", "add", "Program.cs", "setup.iss", "resources/web_bundle_ru/main.js", "resources/web_bundle_ru/i18n-ru.js", "publish_new_release.py"], cwd=repo_root, check=False)
-subprocess.run(["git", "commit", "-m", f"chore: release v{new_tag} (full translation + signed installer)"], cwd=repo_root, check=False)
+subprocess.run(["git", "commit", "-m", f"chore: release v{new_tag} (auto-launch installer + clean signature)"], cwd=repo_root, check=False)
 subprocess.run(["git", "push", "origin", "main"], cwd=repo_root, check=False)
 
 print(f"Creating git tag {new_tag}...")
 subprocess.run(["git", "tag", "-a", new_tag, "-m", f"Release {new_tag}"], cwd=repo_root, check=False)
 subprocess.run(["git", "push", "origin", new_tag], cwd=repo_root, check=False)
 
-# 9. Create GitHub Release
+# 8. Create GitHub Release
 release_title = f"Google Antigravity Localizer v{new_tag}"
 release_body = f"""# Google Antigravity Localizer v{new_tag}
 
 Автономный русификатор для экосистемы **Google Antigravity**:
-- **Минимум ложных срабатываний антивирусов**: инсталлятор собран на доверенном движке Inno Setup и подписан цифровой подписью Authenticode
-- **100% русификация интерфейса**:
+- **Автоматический запуск**: сразу после распаковки установщик автоматически открывает окно русификатора (искать вручную ничего не нужно)
+- **Чистые PE-заголовки**: убрана конфликтующая самоподпись, вызывавшая ошибку «У этого файла отсутствует допустимая цифровая подпись»
+- **100% русификация**:
+  - Задачи («Фоновые задачи», «Запланированные задачи», «Отменить задачу», вывод задач)
+  - Статусы работы («Работает...», «Сжатие», «Сообщения в очереди», «Отправка после завершения работы»)
   - Настройки (Внешний вид, Команды терминала, Сетевые разрешения, Окно)
-  - Окно «Горячие клавиши» (навигация, диалоги, подсказки, удерживание/отпускание клавиш)
-  - Окно «Оставить отзыв» (все категории, формы, подсказки и отправка)
-  - Статус-бар и агенты («Основной агент», переключение агентов, подагенты)
-  - Раздел «Навыки» (Skills) и кастомизации
-  - Перевод размышлений («Размышлял 15 с», «Работал 2 мин», счетчики действий)
-- **Потоковый перевод размышлений агента на лету** с тумблером `[⚡ Авто]` и переключателем `[🌐 RU / EN]`
-- **Antigravity IDE (VS Code Edition)** (15 000+ строк интерфейса)
+  - Горячие клавиши, окно обратной связи («Оставить отзыв»)
+  - Статус-бар («Основной агент», переключение агентов, навыки)
+  - Потоковый перевод размышлений на лету с тумблером `[⚡ Авто]` и переключателем `[🌐 RU / EN]`
+  - Antigravity IDE (VS Code Edition) (15 000+ строк интерфейса)
 
 ---
 
@@ -177,8 +159,7 @@ release_body = f"""# Google Antigravity Localizer v{new_tag}
 
 ## ⚡ Установка:
 1. Скачайте **`{installer_exe_name}`** ниже.
-2. Запустите инсталлятор и следуйте простым подсказкам мастера.
-*(Для любителей portable доступен `{standalone_exe_name}`)*
+2. Запустите — установщик распакует файлы и **автоматически откроет окно русификатора**.
 """
 
 req_data = {
@@ -228,7 +209,7 @@ bat_path = os.path.join(repo_root, "install.bat")
 if os.path.exists(bat_path):
     upload_asset(bat_path, "install.bat")
 
-# 10. Notify Telegram Group / Topic
+# 9. Notify Telegram Group / Topic
 try:
     import tg_notifier
     conf, _ = tg_notifier.get_env()
@@ -241,27 +222,25 @@ try:
         tg_text = f"""🚀 <b>Вышел новый релиз Google Antigravity Localizer v{new_tag}!</b>
 
 ✨ <b>Что нового в v{new_tag}:</b>
-• <b>Антивирусная оптимизация</b>: инсталлятор переведён на доверенный движок Inno Setup + цифровая подпись Authenticode
-• <b>Полная русификация всех уголков интерфейса</b>:
-  — Настройки: Внешний вид, Команды терминала, Сетевые разрешения, Окно
-  — «Горячие клавиши» (Shortcuts): все категории, действия и подсказки
-  — «Оставить отзыв» (Feedback): перевод всех категорий, форм и кнопок
-  — Статус-бар: «Основной агент», выбор агентов, навыки (Skills)
-  — Размышления: «Размышлял 15 с», «Работал 2 мин», счетчики действий
-• <b>Потоковый перевод размышлений на лету</b> с тумблером [⚡ Авто] и [🌐 RU / EN]
+• <b>Автоматический запуск</b>: сразу после распаковки установщик автоматически открывает окно русификатора (искать вручную ничего не нужно)
+• <b>Исправлена цифровая подпись</b>: убрана конфликтующая самоподпись, вызывавшая ошибку Windows «отсутствует допустимая цифровая подпись»
+• <b>Полная русификация всех задач и статусов</b>:
+  — Задачи: «Фоновые задачи», «Запланированные задачи», «Отменить задачу»
+  — Статусы: «Работает...», «Сжатие», «Сообщения в очереди», «Отправка после завершения работы»
+  — Статус-бар: «Основной агент», выбор агентов, навыки
+• <b>Надёжный перевод мыслей</b>: защита от блокировок Google API и автоперевод на лету [⚡ Авто]
 
 📦 <b>GitHub Release:</b> <a href="https://github.com/j46871417-ui/Antigravity-Localizer/releases/tag/{new_tag}">v{new_tag}</a>
-💾 <b>Подписанный установщик: <code>{installer_exe_name}</code> прикреплён ниже 👇</b>"""
+💾 <b>Установщик: <code>{installer_exe_name}</code> прикреплён ниже 👇</b>"""
 
         tg_notifier.send_message(tg_token, tg_chat_id, tg_text, tg_thread_id)
-        file_to_send = installer_exe_path if os.path.exists(installer_exe_path) else standalone_exe_path
-        if os.path.exists(file_to_send):
-            print(f"[*] Загрузка {os.path.basename(file_to_send)} в Telegram...")
+        if os.path.exists(installer_exe_path):
+            print(f"[*] Загрузка {installer_exe_name} в Telegram...")
             tg_notifier.send_document(
                 tg_token,
                 tg_chat_id,
-                file_to_send,
-                caption=f"🚀 <b>{os.path.basename(file_to_send)}</b>\n(Подписанный установщик без ложных срабатываний AV)",
+                installer_exe_path,
+                caption=f"🚀 <b>{installer_exe_name}</b>\n(Автоматический запуск установщика после распаковки)",
                 thread_id=tg_thread_id
             )
             print("[+] Файл и анонс успешно опубликованы в Telegram!")
