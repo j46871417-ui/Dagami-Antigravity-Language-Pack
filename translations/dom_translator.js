@@ -1,7 +1,7 @@
 /**
  * Google Antigravity 2.0 — Russian Localization Engine (Open Source)
  * Автоматический перевод пользовательского интерфейса на русский язык.
- * Репозиторий: https://github.com/j46871417-ui/Antigravity-Localizer
+ * Репозиторий: https://github.com/j46871417-ui/-Antigravity
  */
 (function () {
   'use strict';
@@ -1248,6 +1248,201 @@
   } else {
     startObserver();
   }
+
+  
+// =========================================================================
+// Dynamic On-the-Fly Thinking / Thought Process Translator
+// =========================================================================
+(function () {
+  const STORAGE_KEY_AUTO = 'ag_thoughts_auto_translate';
+  const CACHE = new Map();
+
+  function isAutoTranslate() {
+    try {
+      return localStorage.getItem(STORAGE_KEY_AUTO) === 'true';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function setAutoTranslate(val) {
+    try {
+      localStorage.setItem(STORAGE_KEY_AUTO, val ? 'true' : 'false');
+    } catch (e) {}
+  }
+
+  async function translateText(text) {
+    if (!text || !text.trim()) return text;
+    const trimmed = text.trim();
+    if (CACHE.has(trimmed)) return CACHE.get(trimmed);
+
+    try {
+      const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ru&dt=t&q=' + encodeURIComponent(trimmed);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (Array.isArray(data) && Array.isArray(data[0])) {
+        const translated = data[0].map(function (item) { return item[0] || ''; }).join('');
+        if (translated) {
+          CACHE.set(trimmed, translated);
+          return translated;
+        }
+      }
+    } catch (e) {
+      console.warn('[i18n-ru] Thought translation error:', e);
+    }
+    return text;
+  }
+
+  function processThinkingBlock(triggerEl) {
+    if (!triggerEl || triggerEl.dataset.hasTranslateControls) return;
+    triggerEl.dataset.hasTranslateControls = 'true';
+
+    var collapsible = triggerEl.closest('[data-testid="thinking-collapsible-trigger"]') || triggerEl;
+    var parentContainer = collapsible.parentElement;
+    if (!parentContainer) return;
+
+    var toolbar = document.createElement('span');
+    toolbar.className = 'ag-thought-toolbar';
+    toolbar.style.cssText = 'display:inline-flex; align-items:center; gap:6px; margin-left:10px; font-size:11px; font-family:sans-serif; vertical-align:middle; z-index:10;';
+
+    // 1. RU / EN Button
+    var btnTranslate = document.createElement('button');
+    btnTranslate.type = 'button';
+    btnTranslate.className = 'ag-btn-ru-en';
+    btnTranslate.innerText = '🌐 RU';
+    btnTranslate.title = 'Перевести размышления на русский';
+    btnTranslate.style.cssText = 'padding:1px 6px; border-radius:4px; border:1px solid rgba(128,128,128,0.3); background:rgba(128,128,128,0.1); cursor:pointer; font-size:11px; color:inherit; font-weight:bold;';
+
+    // 2. Auto toggle
+    var btnAuto = document.createElement('button');
+    btnAuto.type = 'button';
+    btnAuto.className = 'ag-btn-auto';
+
+    function updateAutoBtn() {
+      var auto = isAutoTranslate();
+      btnAuto.innerText = auto ? '⚡ Авто: ВКЛ' : '⚡ Авто: ВЫКЛ';
+      btnAuto.style.cssText = 'padding:1px 6px; border-radius:4px; border:1px solid ' + (auto ? '#22c55e' : 'rgba(128,128,128,0.3)') + '; background:' + (auto ? 'rgba(34,197,94,0.15)' : 'rgba(128,128,128,0.1)') + '; color:' + (auto ? '#16a34a' : 'inherit') + '; cursor:pointer; font-size:11px;';
+      btnAuto.title = auto ? 'Автоперевод включен. Кликните для отключения' : 'Автоперевод выключен. Кликните для автоматического перевода мыслей';
+    }
+    updateAutoBtn();
+
+    btnAuto.onclick = function (e) {
+      e.stopPropagation();
+      setAutoTranslate(!isAutoTranslate());
+      var allBtns = document.querySelectorAll('.ag-btn-auto');
+      for (var i = 0; i < allBtns.length; i++) {
+        var auto = isAutoTranslate();
+        allBtns[i].innerText = auto ? '⚡ Авто: ВКЛ' : '⚡ Авто: ВЫКЛ';
+        allBtns[i].style.borderColor = auto ? '#22c55e' : 'rgba(128,128,128,0.3)';
+        allBtns[i].style.backgroundColor = auto ? 'rgba(34,197,94,0.15)' : 'rgba(128,128,128,0.1)';
+        allBtns[i].style.color = auto ? '#16a34a' : 'inherit';
+      }
+      if (isAutoTranslate()) {
+        doTranslate();
+      }
+    };
+
+    var isShowingRussian = false;
+    var originalText = null;
+
+    async function doTranslate() {
+      var contentEl = parentContainer.querySelector('.cursor-edit') || parentContainer.querySelector('pre') || parentContainer;
+      if (!contentEl) return;
+
+      if (!originalText) {
+        originalText = contentEl.innerText;
+      }
+
+      btnTranslate.innerText = '⏳ ...';
+      var ru = await translateText(originalText);
+      if (ru && ru !== originalText) {
+        contentEl.innerText = ru;
+        isShowingRussian = true;
+        btnTranslate.innerText = '🌐 EN';
+        btnTranslate.title = 'Показать оригинальный английский текст';
+        btnTranslate.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+        btnTranslate.style.borderColor = '#3b82f6';
+      } else {
+        btnTranslate.innerText = '🌐 RU';
+      }
+    }
+
+    function doShowEnglish() {
+      var contentEl = parentContainer.querySelector('.cursor-edit') || parentContainer.querySelector('pre') || parentContainer;
+      if (contentEl && originalText) {
+        contentEl.innerText = originalText;
+        isShowingRussian = false;
+        btnTranslate.innerText = '🌐 RU';
+        btnTranslate.title = 'Перевести размышления на русский';
+        btnTranslate.style.backgroundColor = 'rgba(128,128,128,0.1)';
+        btnTranslate.style.borderColor = 'rgba(128,128,128,0.3)';
+      }
+    }
+
+    btnTranslate.onclick = function (e) {
+      e.stopPropagation();
+      if (isShowingRussian) {
+        doShowEnglish();
+      } else {
+        doTranslate();
+      }
+    };
+
+    toolbar.appendChild(btnTranslate);
+    toolbar.appendChild(btnAuto);
+    triggerEl.appendChild(toolbar);
+
+    if (isAutoTranslate()) {
+      setTimeout(doTranslate, 600);
+    }
+  }
+
+  function scanForThinkingBlocks() {
+    var triggers = document.querySelectorAll('[data-testid="thinking-collapsible-trigger"]');
+    for (var i = 0; i < triggers.length; i++) {
+      processThinkingBlock(triggers[i]);
+    }
+
+    var copyBtns = document.querySelectorAll('button[title="Copy thinking"], button[title="Копировать размышления"]');
+    for (var j = 0; j < copyBtns.length; j++) {
+      var btn = copyBtns[j];
+      var parent = btn.closest('div');
+      if (parent && !parent.dataset.hasTranslateControls) {
+        parent.dataset.hasTranslateControls = 'true';
+        (function (b, p) {
+          var ruBtn = document.createElement('button');
+          ruBtn.type = 'button';
+          ruBtn.innerText = '🌐 RU';
+          ruBtn.title = 'Перевести размышления на русский';
+          ruBtn.style.cssText = 'padding:1px 5px; font-size:10px; border-radius:3px; border:1px solid rgba(128,128,128,0.3); background:rgba(128,128,128,0.1); cursor:pointer; margin-right:4px; color:inherit;';
+          ruBtn.onclick = async function (e) {
+            e.stopPropagation();
+            var pre = p.parentElement ? p.parentElement.querySelector('pre') : null;
+            if (pre) {
+              if (!pre._origEn) pre._origEn = pre.innerText;
+              if (pre._isRu) {
+                pre.innerText = pre._origEn;
+                pre._isRu = false;
+                ruBtn.innerText = '🌐 RU';
+              } else {
+                ruBtn.innerText = '...';
+                var tr = await translateText(pre._origEn);
+                pre.innerText = tr;
+                pre._isRu = true;
+                ruBtn.innerText = '🌐 EN';
+              }
+            }
+          };
+          b.parentElement.insertBefore(ruBtn, b);
+        })(btn, parent);
+      }
+    }
+  }
+
+  setInterval(scanForThinkingBlocks, 500);
+})();
+
 
   console.log('[i18n-ru] Russian localization fully active with ' + Object.keys(DICT).length + ' strings');
 })();
