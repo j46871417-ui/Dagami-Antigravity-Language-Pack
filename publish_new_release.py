@@ -135,4 +135,41 @@ if os.path.exists(bat_path):
     res_up = json.loads(urllib.request.urlopen(req_upload).read().decode('utf-8'))
     print("Uploaded install.bat successfully! Size:", res_up.get("size"))
 
+# 8. Notify Telegram Group / Topic
+try:
+    import tg_notifier
+    conf, _ = tg_notifier.get_env()
+    tg_token = conf.get('TG_BOT_TOKEN')
+    tg_chat_id = conf.get('TG_CHAT_ID')
+    tg_thread_id = conf.get('TG_THREAD_ID')
+    
+    if tg_token and tg_chat_id:
+        print("[*] Отправка анонса и файла в Telegram...")
+        tg_text = f"""🚀 <b>Вышел новый релиз Google Antigravity Localizer v{new_tag}!</b>
+
+✨ <b>Что нового:</b>
+• Полная русификация Antigravity 2.0 Desktop и Antigravity IDE (950+ фраз)
+• <b>Потоковый перевод размышлений (Thinking) на лету</b>
+• Переключатель [🌐 RU / EN] и тумблер [⚡ Авто: ВКЛ/ВЫКЛ]
+• Автоматический перевод действий («Работал 15 с», «Редактирование» и др.)
+
+📦 <b>GitHub Release:</b> <a href="https://github.com/j46871417-ui/Antigravity-Localizer/releases/tag/{new_tag}">v{new_tag}</a>
+💾 <b>Файл установщика прикреплён ниже 👇</b>"""
+
+        tg_notifier.send_message(tg_token, tg_chat_id, tg_text, tg_thread_id)
+        if os.path.exists(exe_path):
+            print("[*] Загрузка AntigravityLocalizer.exe в Telegram...")
+            tg_notifier.send_document(
+                tg_token,
+                tg_chat_id,
+                exe_path,
+                caption=f"🚀 <b>AntigravityLocalizer.exe v{new_tag}</b>\n(Автономный установщик русификатора)",
+                thread_id=tg_thread_id
+            )
+            print("[+] Файл и анонс успешно опубликованы в Telegram!")
+    else:
+        print("[*] Telegram Chat ID пока не настроен. Для настройки запустите: python tg_notifier.py --detect")
+except Exception as tg_err:
+    print(f"[!] Ошибка отправки в Telegram: {tg_err}")
+
 print(f"Done: Release {new_tag} published successfully!")
