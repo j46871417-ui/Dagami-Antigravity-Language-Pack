@@ -19,14 +19,14 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Open Source")]
 [assembly: AssemblyProduct("Google Antigravity Localizer")]
 [assembly: AssemblyCopyright("Copyright (c) 2026")]
-[assembly: AssemblyVersion("0.0.15.0")]
-[assembly: AssemblyFileVersion("0.0.15.0")]
+[assembly: AssemblyVersion("0.0.16.0")]
+[assembly: AssemblyFileVersion("0.0.16.0")]
 
 namespace AntigravityLocalizer
 {
     public static class AppConfig
     {
-        public const string Version = "0.0.15";
+        public const string Version = "0.0.16";
     }
 
     static class Program
@@ -1232,10 +1232,11 @@ namespace AntigravityLocalizer
             _lvModels.View = View.Details;
             _lvModels.FullRowSelect = true;
             _lvModels.GridLines = true;
-            _lvModels.Columns.Add("Имя в Antigravity", 140);
-            _lvModels.Columns.Add("Провайдер", 100);
-            _lvModels.Columns.Add("Целевая модель", 140);
-            _lvModels.Columns.Add("API Base / URL", 140);
+            _lvModels.Columns.Add("Имя в Antigravity", 120);
+            _lvModels.Columns.Add("URL для Antigravity", 180);
+            _lvModels.Columns.Add("Провайдер", 90);
+            _lvModels.Columns.Add("Целевая модель", 120);
+            _lvModels.Columns.Add("API Base", 130);
             this.Controls.Add(_lvModels);
 
             // Right side buttons
@@ -1243,33 +1244,52 @@ namespace AntigravityLocalizer
             _btnAdd = new Button();
             _btnAdd.Text = "➕ Добавить...";
             _btnAdd.Location = new Point(bx, by);
-            _btnAdd.Size = new Size(120, 32);
+            _btnAdd.Size = new Size(125, 32);
             _btnAdd.Click += OnAddModel;
             this.Controls.Add(_btnAdd);
 
-            by += 42;
+            by += 40;
             _btnEdit = new Button();
-            _btnEdit.Text = "✏ Редактировать";
+            _btnEdit.Text = "✏ Изменить...";
             _btnEdit.Location = new Point(bx, by);
-            _btnEdit.Size = new Size(120, 32);
+            _btnEdit.Size = new Size(125, 32);
             _btnEdit.Click += OnEditModel;
             this.Controls.Add(_btnEdit);
 
-            by += 42;
+            by += 40;
             _btnDelete = new Button();
             _btnDelete.Text = "🗑 Удалить";
             _btnDelete.Location = new Point(bx, by);
-            _btnDelete.Size = new Size(120, 32);
+            _btnDelete.Size = new Size(125, 32);
             _btnDelete.Click += OnDeleteModel;
             this.Controls.Add(_btnDelete);
 
-            by += 42;
+            by += 40;
             _btnTest = new Button();
             _btnTest.Text = "⚡ Проверить API";
             _btnTest.Location = new Point(bx, by);
-            _btnTest.Size = new Size(120, 32);
+            _btnTest.Size = new Size(125, 32);
             _btnTest.Click += OnTestModel;
             this.Controls.Add(_btnTest);
+
+            by += 45;
+            Button btnCopyUrl = new Button();
+            btnCopyUrl.Text = "📋 Скопировать URL";
+            btnCopyUrl.Location = new Point(bx, by);
+            btnCopyUrl.Size = new Size(125, 36);
+            btnCopyUrl.Click += (s, e) => {
+                if (_lvModels.SelectedItems.Count > 0) {
+                    ModelConfig m = _lvModels.SelectedItems[0].Tag as ModelConfig;
+                    if (m != null) {
+                        string u = "gemini-api:/models/" + m.ModelName;
+                        Clipboard.SetText(u);
+                        MessageBox.Show("URL скопирован в буфер обмена:\n\n" + u + "\n\nВставьте его в Antigravity в поле «URL модели».", "Скопировано", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                } else {
+                    MessageBox.Show("Выберите модель из списка, чтобы скопировать её URL для Antigravity.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            };
+            this.Controls.Add(btnCopyUrl);
         }
 
         private void UpdateServerStatusUI()
@@ -1298,6 +1318,7 @@ namespace AntigravityLocalizer
             foreach (var m in _settings.Models)
             {
                 ListViewItem item = new ListViewItem(m.ModelName);
+                item.SubItems.Add("gemini-api:/models/" + m.ModelName);
                 item.SubItems.Add(m.Provider);
                 item.SubItems.Add(m.TargetModel);
                 item.SubItems.Add(m.ApiBase);
@@ -1359,6 +1380,12 @@ namespace AntigravityLocalizer
             ModelConfig cur = _lvModels.SelectedItems[0].Tag as ModelConfig;
             if (cur == null) return;
 
+            if (string.IsNullOrEmpty(cur.ApiKey) && !cur.Provider.StartsWith("Ollama"))
+            {
+                MessageBox.Show("Для облачной модели «" + cur.ModelName + "» (" + cur.Provider + ") не задан API-ключ!\n\nНажмите кнопку «Изменить...» и вставьте ваш API-ключ (sk-...).", "Отсутствует API-ключ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             Cursor.Current = Cursors.WaitCursor;
             try
             {
@@ -1366,7 +1393,7 @@ namespace AntigravityLocalizer
                 HttpWebRequest req = (HttpWebRequest)WebRequest.Create(endpoint);
                 req.Method = "POST";
                 req.ContentType = "application/json";
-                req.Timeout = 10000;
+                req.Timeout = 12000;
                 if (!string.IsNullOrEmpty(cur.ApiKey))
                 {
                     req.Headers["Authorization"] = "Bearer " + cur.ApiKey;
@@ -1375,7 +1402,7 @@ namespace AntigravityLocalizer
                 JavaScriptSerializer js = new JavaScriptSerializer();
                 var body = new Dictionary<string, object>
                 {
-                    { "model", cur.TargetModel },
+                    { "model", string.IsNullOrEmpty(cur.TargetModel) ? cur.ModelName : cur.TargetModel },
                     { "messages", new object[] { new Dictionary<string, string> { { "role", "user" }, { "content", "ping" } } } },
                     { "max_tokens", 5 }
                 };
@@ -1387,8 +1414,35 @@ namespace AntigravityLocalizer
                 using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
                 {
                     Cursor.Current = Cursors.Default;
-                    MessageBox.Show(string.Format("✓ Успешное подключение к «{0}»!\nКод ответа: {1}", cur.ModelName, resp.StatusCode), "Тест API", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(string.Format("✓ Успешное подключение к «{0}»!\nКод ответа: {1}\n\nМодель доступна и отвечает.", cur.ModelName, resp.StatusCode), "Тест API успешен", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
+            }
+            catch (WebException wex)
+            {
+                Cursor.Current = Cursors.Default;
+                string details = "";
+                try
+                {
+                    if (wex.Response != null)
+                    {
+                        using (var reader = new StreamReader(wex.Response.GetResponseStream()))
+                        {
+                            details = reader.ReadToEnd();
+                        }
+                    }
+                }
+                catch { }
+
+                string msg = wex.Message;
+                if (!string.IsNullOrEmpty(details))
+                {
+                    msg += "\n\nПодробности от сервера:\n" + details;
+                }
+                if (wex.Message.Contains("401"))
+                {
+                    msg += "\n\n(Ошибка 401 означает: неверный или отсутствующий API-ключ. Проверьте ключ в настройках модели).";
+                }
+                MessageBox.Show("✗ Ошибка подключения к " + cur.ModelName + ":\n\n" + msg, "Ошибка теста API", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
@@ -1429,7 +1483,7 @@ namespace AntigravityLocalizer
         private void InitializeComponent()
         {
             this.Text = "Настройка ИИ-модели";
-            this.Size = new Size(480, 320);
+            this.Size = new Size(480, 340);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -1441,6 +1495,16 @@ namespace AntigravityLocalizer
             Label l1 = new Label { Text = "Имя в Antigravity:", Location = new Point(lx, y), AutoSize = true };
             _txtModelName = new TextBox { Location = new Point(tx, y), Size = new Size(280, 23) };
             this.Controls.Add(l1); this.Controls.Add(_txtModelName);
+
+            Label lblUrlHint = new Label { Location = new Point(tx, y + 24), Size = new Size(280, 16), ForeColor = Color.FromArgb(100, 100, 100), Font = new Font("Segoe UI", 7.8F) };
+            _txtModelName.TextChanged += (s, e) => {
+                string nm = _txtModelName.Text.Trim();
+                lblUrlHint.Text = "URL для Antigravity: gemini-api:/models/" + (string.IsNullOrEmpty(nm) ? "..." : nm);
+            };
+            string curNm = _txtModelName.Text.Trim();
+            lblUrlHint.Text = "URL для Antigravity: gemini-api:/models/" + (string.IsNullOrEmpty(curNm) ? "..." : curNm);
+            this.Controls.Add(lblUrlHint);
+            y += 18;
 
             // Provider
             y += 38;
