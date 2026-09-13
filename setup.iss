@@ -1,5 +1,5 @@
 #define MyAppName "Google Antigravity Localizer"
-#define MyAppVersion "0.0.16"
+#define MyAppVersion "0.9.0"
 #define MyAppPublisher "Antigravity Open Source Community"
 #define MyAppURL "https://github.com/j46871417-ui/Antigravity-Localizer"
 
@@ -16,17 +16,17 @@ DisableDirPage=no
 DirExistsWarning=no
 DisableProgramGroupPage=yes
 DisableFinishedPage=yes
-OutputBaseFilename=AntigravityLocalizer_v0.0.16
+OutputBaseFilename=AntigravityLocalizer_v0.9.0
 OutputDir=.
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
 UninstallDisplayName={#MyAppName} (Русификатор)
-VersionInfoVersion=0.0.16.0
+VersionInfoVersion=0.9.0.0
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=Google Antigravity Russian Localization Suite
-VersionInfoProductVersion=0.0.16.0
+VersionInfoProductVersion=0.9.0.0
 VersionInfoProductName={#MyAppName}
 VersionInfoCopyright=Copyright (c) 2026 Antigravity Open Source Community
 
@@ -42,7 +42,7 @@ Source: "translations\ide_strings.json"; DestDir: "{app}\translations"; Flags: i
 Source: "AntigravityLocalizer.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autodesktop}\Google Antigravity Русификатор"; Filename: "{app}\AntigravityLocalizer.exe"
+Name: "{autodesktop}\Google Antigravity Р СѓСЃРёС„РёРєР°С‚РѕСЂ"; Filename: "{app}\AntigravityLocalizer.exe"
 
 [Code]
 var
@@ -86,9 +86,9 @@ begin
   begin
     if IsProcessRunning('Antigravity.exe') or IsProcessRunning('Antigravity IDE.exe') then
     begin
-      if MsgBox('Обнаружены запущенные процессы Google Antigravity.' + #13#10 + #13#10 +
-                'Для безопасной установки русификатора приложение необходимо закрыть.' + #13#10 +
-                'Закрыть Google Antigravity сейчас и продолжить установку?',
+      if MsgBox('РћР±РЅР°СЂСѓР¶РµРЅС‹ Р·Р°РїСѓС‰РµРЅРЅС‹Рµ РїСЂРѕС†РµСЃСЃС‹ Google Antigravity.' + #13#10 + #13#10 +
+                'Р”Р»СЏ Р±РµР·РѕРїР°СЃРЅРѕР№ СѓСЃС‚Р°РЅРѕРІРєРё СЂСѓСЃРёС„РёРєР°С‚РѕСЂР° РїСЂРёР»РѕР¶РµРЅРёРµ РЅРµРѕР±С…РѕРґРёРјРѕ Р·Р°РєСЂС‹С‚СЊ.' + #13#10 +
+                'Р—Р°РєСЂС‹С‚СЊ Google Antigravity СЃРµР№С‡Р°СЃ Рё РїСЂРѕРґРѕР»Р¶РёС‚СЊ СѓСЃС‚Р°РЅРѕРІРєСѓ?',
                 mbConfirmation, MB_YESNO) = idYes then
       begin
         KillAntigravityProcesses();
