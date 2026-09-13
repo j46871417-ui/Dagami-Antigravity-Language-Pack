@@ -1,5 +1,5 @@
 #define MyAppName "Google Antigravity Localizer"
-#define MyAppVersion "0.0.14"
+#define MyAppVersion "0.0.15"
 #define MyAppPublisher "Antigravity Open Source Community"
 #define MyAppURL "https://github.com/j46871417-ui/Antigravity-Localizer"
 
@@ -16,17 +16,17 @@ DisableDirPage=no
 DirExistsWarning=no
 DisableProgramGroupPage=yes
 DisableFinishedPage=yes
-OutputBaseFilename=AntigravityLocalizer_v0.0.14
+OutputBaseFilename=AntigravityLocalizer_v0.0.15
 OutputDir=.
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
 UninstallDisplayName={#MyAppName} (Русификатор)
-VersionInfoVersion=0.0.14.0
+VersionInfoVersion=0.0.15.0
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=Google Antigravity Russian Localization Suite
-VersionInfoProductVersion=0.0.14.0
+VersionInfoProductVersion=0.0.15.0
 VersionInfoProductName={#MyAppName}
 VersionInfoCopyright=Copyright (c) 2026 Antigravity Open Source Community
 

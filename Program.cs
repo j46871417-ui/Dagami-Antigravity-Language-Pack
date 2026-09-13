@@ -1,3 +1,5 @@
+using System.Net;
+using System.Web.Script.Serialization;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -17,14 +19,14 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Open Source")]
 [assembly: AssemblyProduct("Google Antigravity Localizer")]
 [assembly: AssemblyCopyright("Copyright (c) 2026")]
-[assembly: AssemblyVersion("0.0.14.0")]
-[assembly: AssemblyFileVersion("0.0.14.0")]
+[assembly: AssemblyVersion("0.0.15.0")]
+[assembly: AssemblyFileVersion("0.0.15.0")]
 
 namespace AntigravityLocalizer
 {
     public static class AppConfig
     {
-        public const string Version = "0.0.14";
+        public const string Version = "0.0.15";
     }
 
     static class Program
@@ -372,11 +374,20 @@ namespace AntigravityLocalizer
         private Button _btnRestore;
         private ProgressBar _progressBar;
         private TextBox _txtLog;
+        private AIBridgeServer _bridgeServer;
+        private Button _btnManageModels;
 
         public MainForm()
         {
             InitializeComponent();
             _engine = new LocalizerEngine(AppendLog);
+            _bridgeServer = new AIBridgeServer(AppendLog);
+            if (_bridgeServer.Settings.AutoStart)
+            {
+                _bridgeServer.Start();
+                // Set environment variable for the session so language_server uses it if launched
+                Environment.SetEnvironmentVariable("AGY_API_SERVER_URL", string.Format("http://127.0.0.1:{0}", _bridgeServer.Settings.Port));
+            }
             RefreshPaths();
             AppendLog(string.Format("Google Antigravity Localizer v{0} готов к работе.", AppConfig.Version));
             AppendLog("Группа сообщества в Telegram: https://t.me/+8qU7020rMF84OWNi\n");
@@ -521,20 +532,37 @@ namespace AntigravityLocalizer
             _btnRestore.Cursor = Cursors.Hand;
             _btnRestore.Click += OnRestoreClick;
 
+            _btnManageModels = new Button();
+            _btnManageModels.Text = "🤖  Сторонние ИИ-модели (AI Bridge)";
+            _btnManageModels.Location = new Point(0, 182);
+            _btnManageModels.Size = new Size(625, 34);
+            _btnManageModels.BackColor = Color.FromArgb(41, 128, 185);
+            _btnManageModels.ForeColor = Color.White;
+            _btnManageModels.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            _btnManageModels.FlatStyle = FlatStyle.Flat;
+            _btnManageModels.FlatAppearance.BorderSize = 0;
+            _btnManageModels.Cursor = Cursors.Hand;
+            _btnManageModels.Click += (s, e) => {
+                using (ModelsForm mf = new ModelsForm(_bridgeServer)) {
+                    mf.ShowDialog(this);
+                }
+            };
+
             body.Controls.Add(_btnInstall);
             body.Controls.Add(_btnRestore);
+            body.Controls.Add(_btnManageModels);
 
             // Progress Bar
             _progressBar = new ProgressBar();
-            _progressBar.Location = new Point(0, 186);
+            _progressBar.Location = new Point(0, 222);
             _progressBar.Size = new Size(625, 8);
             _progressBar.Style = ProgressBarStyle.Blocks;
             body.Controls.Add(_progressBar);
 
             // Log TextBox
             _txtLog = new TextBox();
-            _txtLog.Location = new Point(0, 202);
-            _txtLog.Size = new Size(625, 220);
+            _txtLog.Location = new Point(0, 235);
+            _txtLog.Size = new Size(625, 185);
             _txtLog.Multiline = true;
             _txtLog.ReadOnly = true;
             _txtLog.ScrollBars = ScrollBars.Vertical;
@@ -691,5 +719,801 @@ namespace AntigravityLocalizer
                 }));
             });
         }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (_bridgeServer != null)
+            {
+                _bridgeServer.Stop();
+            }
+            base.OnFormClosing(e);
+        }
+
+    
+
+    public class ModelConfig
+    {
+        public string ModelName { get; set; }        // e.g. "deepseek-chat"
+        public string Provider { get; set; }         // "OpenAI", "DeepSeek", "Ollama", "OpenRouter", "Custom"
+        public string TargetModel { get; set; }      // e.g. "deepseek-chat" or "llama3:latest"
+        public string ApiBase { get; set; }          // e.g. "https://api.deepseek.com/v1" or "http://127.0.0.1:11434/v1"
+        public string ApiKey { get; set; }           // encrypted or raw API key
+        public bool IsEnabled { get; set; }
+
+        public ModelConfig()
+        {
+            IsEnabled = true;
+        }
     }
+
+    public class BridgeSettings
+    {
+        public int Port { get; set; }
+        public bool AutoStart { get; set; }
+        public List<ModelConfig> Models { get; set; }
+
+        public BridgeSettings()
+        {
+            Port = 51122;
+            AutoStart = true;
+            Models = new List<ModelConfig>();
+        }
+    }
+
+    public static class BridgeConfigManager
+    {
+        private static string ConfigPath
+        {
+            get
+            {
+                string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AntigravityLocalizer");
+                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                return Path.Combine(dir, "ai_bridge_models.json");
+            }
+        }
+
+        public static BridgeSettings LoadSettings()
+        {
+            try
+            {
+                if (File.Exists(ConfigPath))
+                {
+                    string json = File.ReadAllText(ConfigPath, Encoding.UTF8);
+                    JavaScriptSerializer serializer = new JavaScriptSerializer();
+                    BridgeSettings s = serializer.Deserialize<BridgeSettings>(json);
+                    if (s != null && s.Models != null) return s;
+                }
+            }
+            catch { }
+
+            BridgeSettings def = new BridgeSettings();
+            def.Models.Add(new ModelConfig
+            {
+                ModelName = "ollama-local",
+                Provider = "Ollama",
+                TargetModel = "llama3:latest",
+                ApiBase = "http://127.0.0.1:11434/v1",
+                ApiKey = "ollama",
+                IsEnabled = true
+            });
+            def.Models.Add(new ModelConfig
+            {
+                ModelName = "deepseek-chat",
+                Provider = "DeepSeek",
+                TargetModel = "deepseek-chat",
+                ApiBase = "https://api.deepseek.com/v1",
+                ApiKey = "",
+                IsEnabled = true
+            });
+            SaveSettings(def);
+            return def;
+        }
+
+        public static void SaveSettings(BridgeSettings settings)
+        {
+            try
+            {
+                JavaScriptSerializer serializer = new JavaScriptSerializer();
+                string json = serializer.Serialize(settings);
+                File.WriteAllText(ConfigPath, json, Encoding.UTF8);
+            }
+            catch { }
+        }
+    }
+
+    public class AIBridgeServer
+    {
+        private HttpListener _listener;
+        private Thread _serverThread;
+        private bool _isRunning;
+        private Action<string> _logger;
+        public BridgeSettings Settings { get; set; }
+
+        public bool IsRunning { get { return _isRunning; } }
+
+        public AIBridgeServer(Action<string> logger)
+        {
+            _logger = logger ?? (m => { });
+            Settings = BridgeConfigManager.LoadSettings();
+        }
+
+        public void Start()
+        {
+            if (_isRunning) return;
+            try
+            {
+                _listener = new HttpListener();
+                _listener.Prefixes.Add(string.Format("http://127.0.0.1:{0}/", Settings.Port));
+                _listener.Start();
+                _isRunning = true;
+                _serverThread = new Thread(ListenLoop);
+                _serverThread.IsBackground = true;
+                _serverThread.Start();
+                _logger(string.Format("[+] AI Bridge запущен на http://127.0.0.1:{0}/", Settings.Port));
+            }
+            catch (Exception ex)
+            {
+                _logger(string.Format("[-] Ошибка запуска AI Bridge: {0}", ex.Message));
+                _isRunning = false;
+            }
+        }
+
+        public void Stop()
+        {
+            if (!_isRunning) return;
+            try
+            {
+                _isRunning = false;
+                if (_listener != null)
+                {
+                    _listener.Stop();
+                    _listener.Close();
+                }
+                _logger("[*] AI Bridge остановлен.");
+            }
+            catch { }
+        }
+
+        private void ListenLoop()
+        {
+            while (_isRunning && _listener != null && _listener.IsListening)
+            {
+                try
+                {
+                    HttpListenerContext ctx = _listener.GetContext();
+                    ThreadPool.QueueUserWorkItem(_ => ProcessRequest(ctx));
+                }
+                catch
+                {
+                    if (!_isRunning) break;
+                }
+            }
+        }
+
+        private void ProcessRequest(HttpListenerContext ctx)
+        {
+            try
+            {
+                string rawUrl = ctx.Request.RawUrl;
+                string method = ctx.Request.HttpMethod;
+
+                // Handle CORS preflight
+                if (method == "OPTIONS")
+                {
+                    ctx.Response.AddHeader("Access-Control-Allow-Origin", "*");
+                    ctx.Response.AddHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+                    ctx.Response.AddHeader("Access-Control-Allow-Headers", "*");
+                    ctx.Response.StatusCode = 200;
+                    ctx.Response.Close();
+                    return;
+                }
+
+                // Path: /v1beta/models/{modelName}:streamGenerateContent or :generateContent
+                if (rawUrl.Contains("/v1beta/models/"))
+                {
+                    HandleGeminiProxy(ctx);
+                }
+                else
+                {
+                    byte[] b = Encoding.UTF8.GetBytes("Antigravity AI Bridge Active.");
+                    ctx.Response.ContentType = "text/plain";
+                    ctx.Response.OutputStream.Write(b, 0, b.Length);
+                    ctx.Response.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger(string.Format("[!] Ошибка обработки запроса: {0}", ex.Message));
+                try { ctx.Response.StatusCode = 500; ctx.Response.Close(); } catch { }
+            }
+        }
+
+        private void HandleGeminiProxy(HttpListenerContext ctx)
+        {
+            string rawUrl = ctx.Request.RawUrl;
+            bool isStream = rawUrl.Contains("streamGenerateContent");
+
+            // Extract model name from URL
+            // e.g. /v1beta/models/deepseek-chat:streamGenerateContent?alt=sse
+            int mIdx = rawUrl.IndexOf("/v1beta/models/");
+            string sub = rawUrl.Substring(mIdx + 15);
+            int colonIdx = sub.IndexOf(':');
+            string modelName = colonIdx > 0 ? sub.Substring(0, colonIdx) : sub.Split('?')[0];
+
+            _logger(string.Format("[AI Bridge] Запрос модели: {0} (stream={1})", modelName, isStream));
+
+            // Read request body
+            string reqBody = "";
+            using (var reader = new StreamReader(ctx.Request.InputStream, ctx.Request.ContentEncoding))
+            {
+                reqBody = reader.ReadToEnd();
+            }
+
+            // Find configured model
+            ModelConfig target = null;
+            foreach (var m in Settings.Models)
+            {
+                if (m.IsEnabled && string.Equals(m.ModelName, modelName, StringComparison.OrdinalIgnoreCase))
+                {
+                    target = m;
+                    break;
+                }
+            }
+
+            if (target == null && Settings.Models.Count > 0)
+            {
+                target = Settings.Models[0]; // fallback
+            }
+
+            if (target == null)
+            {
+                byte[] err = Encoding.UTF8.GetBytes("{\"error\":\"Model not configured in AI Bridge\"}");
+                ctx.Response.StatusCode = 404;
+                ctx.Response.ContentType = "application/json";
+                ctx.Response.OutputStream.Write(err, 0, err.Length);
+                ctx.Response.Close();
+                return;
+            }
+
+            // Convert Gemini contents -> OpenAI messages
+            JavaScriptSerializer js = new JavaScriptSerializer();
+            Dictionary<string, object> geminiReq = null;
+            try { geminiReq = js.Deserialize<Dictionary<string, object>>(reqBody); } catch { }
+
+            List<Dictionary<string, string>> openAiMessages = new List<Dictionary<string, string>>();
+            if (geminiReq != null && geminiReq.ContainsKey("contents"))
+            {
+                object[] contents = geminiReq["contents"] as object[];
+                if (contents != null)
+                {
+                    foreach (object cObj in contents)
+                    {
+                        var cDict = cObj as Dictionary<string, object>;
+                        if (cDict == null) continue;
+                        string role = cDict.ContainsKey("role") ? Convert.ToString(cDict["role"]) : "user";
+                        if (role == "model") role = "assistant";
+
+                        StringBuilder textAccum = new StringBuilder();
+                        if (cDict.ContainsKey("parts"))
+                        {
+                            object[] parts = cDict["parts"] as object[];
+                            if (parts != null)
+                            {
+                                foreach (object pObj in parts)
+                                {
+                                    var pDict = pObj as Dictionary<string, object>;
+                                    if (pDict != null && pDict.ContainsKey("text"))
+                                    {
+                                        textAccum.AppendLine(Convert.ToString(pDict["text"]));
+                                    }
+                                }
+                            }
+                        }
+
+                        openAiMessages.Add(new Dictionary<string, string>
+                        {
+                            { "role", role },
+                            { "content", textAccum.ToString().TrimEnd() }
+                        });
+                    }
+                }
+            }
+
+            // Construct OpenAI request
+            Dictionary<string, object> openAiReq = new Dictionary<string, object>
+            {
+                { "model", string.IsNullOrEmpty(target.TargetModel) ? modelName : target.TargetModel },
+                { "messages", openAiMessages },
+                { "stream", isStream }
+            };
+
+            string endpoint = target.ApiBase.TrimEnd('/') + "/chat/completions";
+            HttpWebRequest clientReq = (HttpWebRequest)WebRequest.Create(endpoint);
+            clientReq.Method = "POST";
+            clientReq.ContentType = "application/json";
+            if (!string.IsNullOrEmpty(target.ApiKey))
+            {
+                clientReq.Headers["Authorization"] = "Bearer " + target.ApiKey;
+            }
+
+            byte[] outData = Encoding.UTF8.GetBytes(js.Serialize(openAiReq));
+            clientReq.ContentLength = outData.Length;
+            using (Stream reqStream = clientReq.GetRequestStream())
+            {
+                reqStream.Write(outData, 0, outData.Length);
+            }
+
+            // Forward response
+            try
+            {
+                using (HttpWebResponse clientResp = (HttpWebResponse)clientReq.GetResponse())
+                {
+                    ctx.Response.AddHeader("Access-Control-Allow-Origin", "*");
+                    ctx.Response.StatusCode = 200;
+
+                    if (isStream)
+                    {
+                        ctx.Response.ContentType = "text/event-stream";
+                        ctx.Response.SendChunked = true;
+
+                        using (Stream s = clientResp.GetResponseStream())
+                        using (StreamReader sr = new StreamReader(s, Encoding.UTF8))
+                        using (StreamWriter sw = new StreamWriter(ctx.Response.OutputStream, Encoding.UTF8))
+                        {
+                            string line;
+                            while ((line = sr.ReadLine()) != null)
+                            {
+                                string trimmed = line.Trim();
+                                if (!trimmed.StartsWith("data:")) continue;
+                                string payload = trimmed.Substring(5).Trim();
+                                if (payload == "[DONE]") break;
+
+                                try
+                                {
+                                    var chunkDict = js.Deserialize<Dictionary<string, object>>(payload);
+                                    if (chunkDict != null && chunkDict.ContainsKey("choices"))
+                                    {
+                                        object[] choices = chunkDict["choices"] as object[];
+                                        if (choices != null && choices.Length > 0)
+                                        {
+                                            var firstChoice = choices[0] as Dictionary<string, object>;
+                                            if (firstChoice != null && firstChoice.ContainsKey("delta"))
+                                            {
+                                                var delta = firstChoice["delta"] as Dictionary<string, object>;
+                                                if (delta != null && delta.ContainsKey("content"))
+                                                {
+                                                    string cText = Convert.ToString(delta["content"]);
+                                                    if (!string.IsNullOrEmpty(cText))
+                                                    {
+                                                        var gChunk = new Dictionary<string, object>
+                                                        {
+                                                            {
+                                                                "candidates", new object[]
+                                                                {
+                                                                    new Dictionary<string, object>
+                                                                    {
+                                                                        { "content", new Dictionary<string, object> { { "parts", new object[] { new Dictionary<string, object> { { "text", cText } } } }, { "role", "model" } } }
+                                                                    }
+                                                                }
+                                                            }
+                                                        };
+                                                        sw.Write("data: " + js.Serialize(gChunk) + "\n\n");
+                                                        sw.Flush();
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        using (Stream s = clientResp.GetResponseStream())
+                        using (StreamReader sr = new StreamReader(s, Encoding.UTF8))
+                        {
+                            string respText = sr.ReadToEnd();
+                            var oResp = js.Deserialize<Dictionary<string, object>>(respText);
+                            string finalContent = "";
+                            if (oResp != null && oResp.ContainsKey("choices"))
+                            {
+                                object[] choices = oResp["choices"] as object[];
+                                if (choices != null && choices.Length > 0)
+                                {
+                                    var ch = choices[0] as Dictionary<string, object>;
+                                    if (ch != null && ch.ContainsKey("message"))
+                                    {
+                                        var msg = ch["message"] as Dictionary<string, object>;
+                                        if (msg != null && msg.ContainsKey("content"))
+                                        {
+                                            finalContent = Convert.ToString(msg["content"]);
+                                        }
+                                    }
+                                }
+                            }
+
+                            var gResp = new Dictionary<string, object>
+                            {
+                                {
+                                    "candidates", new object[]
+                                    {
+                                        new Dictionary<string, object>
+                                        {
+                                            { "content", new Dictionary<string, object> { { "parts", new object[] { new Dictionary<string, object> { { "text", finalContent } } } }, { "role", "model" } } }
+                                        }
+                                    }
+                                }
+                            };
+                            byte[] gBytes = Encoding.UTF8.GetBytes(js.Serialize(gResp));
+                            ctx.Response.ContentType = "application/json";
+                            ctx.Response.ContentLength64 = gBytes.Length;
+                            ctx.Response.OutputStream.Write(gBytes, 0, gBytes.Length);
+                        }
+                    }
+                }
+            }
+            catch (WebException wex)
+            {
+                _logger(string.Format("[AI Bridge Error]: {0}", wex.Message));
+                ctx.Response.StatusCode = 502;
+                byte[] err = Encoding.UTF8.GetBytes("{\"error\":\"" + wex.Message + "\"}");
+                ctx.Response.OutputStream.Write(err, 0, err.Length);
+            }
+            finally
+            {
+                try { ctx.Response.Close(); } catch { }
+            }
+        }
+    }
+
+
+    public class ModelsForm : Form
+    {
+        private ListView _lvModels;
+        private Button _btnAdd;
+        private Button _btnEdit;
+        private Button _btnDelete;
+        private Button _btnTest;
+        private Button _btnToggleServer;
+        private Label _lblServerStatus;
+        private BridgeSettings _settings;
+        private AIBridgeServer _server;
+
+        public ModelsForm(AIBridgeServer server)
+        {
+            _server = server;
+            _settings = _server.Settings;
+            InitializeComponent();
+            LoadModelsToListView();
+            UpdateServerStatusUI();
+        }
+
+        private void InitializeComponent()
+        {
+            this.Text = "Управление сторонними ИИ-моделями (AI Bridge)";
+            this.Size = new Size(720, 500);
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.Font = new Font("Segoe UI", 9F);
+            this.BackColor = Color.FromArgb(248, 249, 250);
+
+            // Server status bar
+            Panel pnlTop = new Panel();
+            pnlTop.Dock = DockStyle.Top;
+            pnlTop.Height = 55;
+            pnlTop.BackColor = Color.FromArgb(240, 243, 246);
+
+            _lblServerStatus = new Label();
+            _lblServerStatus.Location = new Point(15, 18);
+            _lblServerStatus.AutoSize = true;
+            _lblServerStatus.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+
+            _btnToggleServer = new Button();
+            _btnToggleServer.Location = new Point(520, 12);
+            _btnToggleServer.Size = new Size(165, 32);
+            _btnToggleServer.FlatStyle = FlatStyle.Flat;
+            _btnToggleServer.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            _btnToggleServer.Click += (s, e) =>
+            {
+                if (_server.IsRunning) _server.Stop();
+                else _server.Start();
+                UpdateServerStatusUI();
+            };
+
+            pnlTop.Controls.Add(_lblServerStatus);
+            pnlTop.Controls.Add(_btnToggleServer);
+            this.Controls.Add(pnlTop);
+
+            // Models list view
+            _lvModels = new ListView();
+            _lvModels.Location = new Point(15, 70);
+            _lvModels.Size = new Size(540, 370);
+            _lvModels.View = View.Details;
+            _lvModels.FullRowSelect = true;
+            _lvModels.GridLines = true;
+            _lvModels.Columns.Add("Имя в Antigravity", 140);
+            _lvModels.Columns.Add("Провайдер", 100);
+            _lvModels.Columns.Add("Целевая модель", 140);
+            _lvModels.Columns.Add("API Base / URL", 140);
+            this.Controls.Add(_lvModels);
+
+            // Right side buttons
+            int bx = 570, by = 70;
+            _btnAdd = new Button();
+            _btnAdd.Text = "➕ Добавить...";
+            _btnAdd.Location = new Point(bx, by);
+            _btnAdd.Size = new Size(120, 32);
+            _btnAdd.Click += OnAddModel;
+            this.Controls.Add(_btnAdd);
+
+            by += 42;
+            _btnEdit = new Button();
+            _btnEdit.Text = "✏ Редактировать";
+            _btnEdit.Location = new Point(bx, by);
+            _btnEdit.Size = new Size(120, 32);
+            _btnEdit.Click += OnEditModel;
+            this.Controls.Add(_btnEdit);
+
+            by += 42;
+            _btnDelete = new Button();
+            _btnDelete.Text = "🗑 Удалить";
+            _btnDelete.Location = new Point(bx, by);
+            _btnDelete.Size = new Size(120, 32);
+            _btnDelete.Click += OnDeleteModel;
+            this.Controls.Add(_btnDelete);
+
+            by += 42;
+            _btnTest = new Button();
+            _btnTest.Text = "⚡ Проверить API";
+            _btnTest.Location = new Point(bx, by);
+            _btnTest.Size = new Size(120, 32);
+            _btnTest.Click += OnTestModel;
+            this.Controls.Add(_btnTest);
+        }
+
+        private void UpdateServerStatusUI()
+        {
+            if (_server.IsRunning)
+            {
+                _lblServerStatus.Text = string.Format("🟢 AI Bridge активен на порту {0}", _server.Settings.Port);
+                _lblServerStatus.ForeColor = Color.FromArgb(34, 139, 34);
+                _btnToggleServer.Text = "Остановить мост";
+                _btnToggleServer.BackColor = Color.FromArgb(230, 100, 100);
+                _btnToggleServer.ForeColor = Color.White;
+            }
+            else
+            {
+                _lblServerStatus.Text = "🔴 AI Bridge остановлен";
+                _lblServerStatus.ForeColor = Color.FromArgb(180, 50, 50);
+                _btnToggleServer.Text = "Запустить мост";
+                _btnToggleServer.BackColor = Color.FromArgb(34, 139, 34);
+                _btnToggleServer.ForeColor = Color.White;
+            }
+        }
+
+        private void LoadModelsToListView()
+        {
+            _lvModels.Items.Clear();
+            foreach (var m in _settings.Models)
+            {
+                ListViewItem item = new ListViewItem(m.ModelName);
+                item.SubItems.Add(m.Provider);
+                item.SubItems.Add(m.TargetModel);
+                item.SubItems.Add(m.ApiBase);
+                item.Tag = m;
+                _lvModels.Items.Add(item);
+            }
+        }
+
+        private void OnAddModel(object sender, EventArgs e)
+        {
+            using (EditModelDialog dlg = new EditModelDialog(null))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    _settings.Models.Add(dlg.Config);
+                    BridgeConfigManager.SaveSettings(_settings);
+                    LoadModelsToListView();
+                }
+            }
+        }
+
+        private void OnEditModel(object sender, EventArgs e)
+        {
+            if (_lvModels.SelectedItems.Count == 0) return;
+            ModelConfig cur = _lvModels.SelectedItems[0].Tag as ModelConfig;
+            if (cur == null) return;
+
+            using (EditModelDialog dlg = new EditModelDialog(cur))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    BridgeConfigManager.SaveSettings(_settings);
+                    LoadModelsToListView();
+                }
+            }
+        }
+
+        private void OnDeleteModel(object sender, EventArgs e)
+        {
+            if (_lvModels.SelectedItems.Count == 0) return;
+            ModelConfig cur = _lvModels.SelectedItems[0].Tag as ModelConfig;
+            if (cur == null) return;
+
+            if (MessageBox.Show(string.Format("Удалить модель «{0}»?", cur.ModelName), "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                _settings.Models.Remove(cur);
+                BridgeConfigManager.SaveSettings(_settings);
+                LoadModelsToListView();
+            }
+        }
+
+        private void OnTestModel(object sender, EventArgs e)
+        {
+            if (_lvModels.SelectedItems.Count == 0)
+            {
+                MessageBox.Show("Выберите модель из списка для проверки.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            ModelConfig cur = _lvModels.SelectedItems[0].Tag as ModelConfig;
+            if (cur == null) return;
+
+            Cursor.Current = Cursors.WaitCursor;
+            try
+            {
+                string endpoint = cur.ApiBase.TrimEnd('/') + "/chat/completions";
+                HttpWebRequest req = (HttpWebRequest)WebRequest.Create(endpoint);
+                req.Method = "POST";
+                req.ContentType = "application/json";
+                req.Timeout = 10000;
+                if (!string.IsNullOrEmpty(cur.ApiKey))
+                {
+                    req.Headers["Authorization"] = "Bearer " + cur.ApiKey;
+                }
+
+                JavaScriptSerializer js = new JavaScriptSerializer();
+                var body = new Dictionary<string, object>
+                {
+                    { "model", cur.TargetModel },
+                    { "messages", new object[] { new Dictionary<string, string> { { "role", "user" }, { "content", "ping" } } } },
+                    { "max_tokens", 5 }
+                };
+
+                byte[] b = Encoding.UTF8.GetBytes(js.Serialize(body));
+                req.ContentLength = b.Length;
+                using (Stream s = req.GetRequestStream()) s.Write(b, 0, b.Length);
+
+                using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
+                {
+                    Cursor.Current = Cursors.Default;
+                    MessageBox.Show(string.Format("✓ Успешное подключение к «{0}»!\nКод ответа: {1}", cur.ModelName, resp.StatusCode), "Тест API", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                Cursor.Current = Cursors.Default;
+                MessageBox.Show(string.Format("✗ Ошибка подключения:\n{0}", ex.Message), "Ошибка теста API", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+    }
+
+    public class EditModelDialog : Form
+    {
+        public ModelConfig Config { get; private set; }
+
+        private TextBox _txtModelName;
+        private ComboBox _cmbProvider;
+        private TextBox _txtTargetModel;
+        private TextBox _txtApiBase;
+        private TextBox _txtApiKey;
+
+        public EditModelDialog(ModelConfig existing)
+        {
+            Config = existing ?? new ModelConfig();
+            InitializeComponent();
+            if (existing != null)
+            {
+                _txtModelName.Text = existing.ModelName;
+                _cmbProvider.SelectedItem = existing.Provider;
+                _txtTargetModel.Text = existing.TargetModel;
+                _txtApiBase.Text = existing.ApiBase;
+                _txtApiKey.Text = existing.ApiKey;
+            }
+            else
+            {
+                _cmbProvider.SelectedIndex = 0;
+            }
+        }
+
+        private void InitializeComponent()
+        {
+            this.Text = "Настройка ИИ-модели";
+            this.Size = new Size(480, 320);
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.MaximizeBox = false;
+            this.Font = new Font("Segoe UI", 9F);
+
+            int lx = 20, tx = 160, y = 20;
+
+            // Model name in Antigravity
+            Label l1 = new Label { Text = "Имя в Antigravity:", Location = new Point(lx, y), AutoSize = true };
+            _txtModelName = new TextBox { Location = new Point(tx, y), Size = new Size(280, 23) };
+            this.Controls.Add(l1); this.Controls.Add(_txtModelName);
+
+            // Provider
+            y += 38;
+            Label l2 = new Label { Text = "Провайдер:", Location = new Point(lx, y), AutoSize = true };
+            _cmbProvider = new ComboBox { Location = new Point(tx, y), Size = new Size(280, 23), DropDownStyle = ComboBoxStyle.DropDownList };
+            _cmbProvider.Items.AddRange(new object[] { "Ollama (Локальный)", "DeepSeek", "OpenAI", "OpenRouter", "Custom" });
+            _cmbProvider.SelectedIndexChanged += OnProviderChanged;
+            this.Controls.Add(l2); this.Controls.Add(_cmbProvider);
+
+            // Target Model
+            y += 38;
+            Label l3 = new Label { Text = "ID модели (API):", Location = new Point(lx, y), AutoSize = true };
+            _txtTargetModel = new TextBox { Location = new Point(tx, y), Size = new Size(280, 23) };
+            this.Controls.Add(l3); this.Controls.Add(_txtTargetModel);
+
+            // API Base
+            y += 38;
+            Label l4 = new Label { Text = "Базовый URL:", Location = new Point(lx, y), AutoSize = true };
+            _txtApiBase = new TextBox { Location = new Point(tx, y), Size = new Size(280, 23) };
+            this.Controls.Add(l4); this.Controls.Add(_txtApiBase);
+
+            // API Key
+            y += 38;
+            Label l5 = new Label { Text = "API Ключ:", Location = new Point(lx, y), AutoSize = true };
+            _txtApiKey = new TextBox { Location = new Point(tx, y), Size = new Size(280, 23), UseSystemPasswordChar = true };
+            this.Controls.Add(l5); this.Controls.Add(_txtApiKey);
+
+            // Buttons
+            y += 45;
+            Button btnOk = new Button { Text = "Сохранить", Location = new Point(230, y), Size = new Size(100, 30), DialogResult = DialogResult.OK };
+            btnOk.Click += (s, e) =>
+            {
+                Config.ModelName = _txtModelName.Text.Trim();
+                Config.Provider = _cmbProvider.SelectedItem.ToString();
+                Config.TargetModel = _txtTargetModel.Text.Trim();
+                Config.ApiBase = _txtApiBase.Text.Trim();
+                Config.ApiKey = _txtApiKey.Text.Trim();
+            };
+
+            Button btnCancel = new Button { Text = "Отмена", Location = new Point(340, y), Size = new Size(100, 30), DialogResult = DialogResult.Cancel };
+
+            this.Controls.Add(btnOk);
+            this.Controls.Add(btnCancel);
+            this.AcceptButton = btnOk;
+            this.CancelButton = btnCancel;
+        }
+
+        private void OnProviderChanged(object sender, EventArgs e)
+        {
+            string p = _cmbProvider.SelectedItem.ToString();
+            if (p.StartsWith("Ollama"))
+            {
+                if (string.IsNullOrEmpty(_txtApiBase.Text)) _txtApiBase.Text = "http://127.0.0.1:11434/v1";
+                if (string.IsNullOrEmpty(_txtTargetModel.Text)) _txtTargetModel.Text = "llama3:latest";
+                _txtApiKey.Text = "ollama";
+            }
+            else if (p == "DeepSeek")
+            {
+                if (string.IsNullOrEmpty(_txtApiBase.Text) || _txtApiBase.Text.Contains("11434")) _txtApiBase.Text = "https://api.deepseek.com/v1";
+                if (string.IsNullOrEmpty(_txtTargetModel.Text) || _txtTargetModel.Text.Contains("llama")) _txtTargetModel.Text = "deepseek-chat";
+            }
+            else if (p == "OpenAI")
+            {
+                if (string.IsNullOrEmpty(_txtApiBase.Text) || _txtApiBase.Text.Contains("deepseek") || _txtApiBase.Text.Contains("11434")) _txtApiBase.Text = "https://api.openai.com/v1";
+                if (string.IsNullOrEmpty(_txtTargetModel.Text) || _txtTargetModel.Text.Contains("llama") || _txtTargetModel.Text.Contains("deepseek")) _txtTargetModel.Text = "gpt-4o";
+            }
+            else if (p == "OpenRouter")
+            {
+                if (string.IsNullOrEmpty(_txtApiBase.Text)) _txtApiBase.Text = "https://openrouter.ai/api/v1";
+            }
+        }
+    }
+
+
+}
 }

@@ -27,7 +27,7 @@ repo_api = 'https://api.github.com/repos/j46871417-ui/Antigravity-Localizer'
 if len(sys.argv) > 1:
     new_tag = sys.argv[1].strip()
 else:
-    new_tag = "0.0.14"
+    new_tag = "0.0.15"
 
 print(f"[*] Target release tag: {new_tag}")
 
@@ -91,6 +91,7 @@ csc_cmd = [
     "/r:System.Drawing.dll",
     "/r:System.IO.Compression.dll",
     "/r:System.IO.Compression.FileSystem.dll",
+    "/r:System.Web.Extensions.dll",
     prog_cs_path
 ]
 print(f"[*] Compiling AntigravityLocalizer.exe...")
@@ -135,6 +136,8 @@ subprocess.run([
     "antigravity_localizer.py",
     "install.ps1",
     ".github/workflows/build.yml",
+    "resources/app.asar",
+    "ai_bridge.py",
     "resources/web_bundle_ru/i18n-ru.js",
     "resources/web_bundle_ru/main.js",
     "translations/chat_strings.json",
@@ -152,29 +155,26 @@ subprocess.run(["git", "tag", "-a", new_tag, "-m", f"Release {new_tag}"], cwd=re
 subprocess.run(["git", "push", "origin", new_tag], cwd=repo_root, check=False)
 
 # 8. Create GitHub Release
-release_title = f"Google Antigravity Localizer v{new_tag} - Live Translator & Diffs Fix"
-release_body = f"""# Google Antigravity Localizer v{new_tag} — Live Translator & Diffs Fix
+release_title = f"Google Antigravity Localizer v{new_tag} - Custom AI Models & AI Bridge"
+release_body = f"""# Google Antigravity Localizer v{new_tag} — Поддержка сторонних ИИ-моделей (AI Bridge)
 
-Срочное обновление с восстановлением онлайн-перевода ответов ИИ и локализацией списков изменений файлов:
+Крупное обновление: добавлена возможность подключать **любые сторонние ИИ-модели** (Ollama, DeepSeek, OpenAI, OpenRouter и др.) через встроенный шлюз **AI Bridge** и графический интерфейс!
 
-### 🌐 Восстановление и усиление онлайн-переводчика (Live AI Translator):
-- **Многоуровневый отказоустойчивый стек (Multi-Tier Failover)**:
-  - Устранена проблема блокировки/HTTP 429 от Google Translate `client=gtx` при серийных запросах.
-  - Добавлена каскадная система эндпоинтов с мгновенным переключением при сбоях: `clients5.google.com` ➔ `clients3.google.com` ➔ `clients1.google.com` ➔ `translate.googleapis.com` ➔ `api.mymemory.translated.net`.
-  - Внедрен жесткий таймаут (`AbortController` 3.5 сек), благодаря чему недоступные или зависшие серверы не блокируют интерфейс.
-- **Корректный парсинг и очистка ответов**:
-  - Исправлена конкатенация массивов ответов Google Translate (устранены прилипающие служебные суффиксы `,en`).
-  - Умное дробление длинных сообщений на безопасные чанки (< 1800 символов), исключающее ошибки `414 URI Too Long`.
-- **Помехоустойчивое сохранение разметки и кода**:
-  - Толерантное восстановление инлайн-кода и блоков кода (`___AG_CODE_X___`, `___AG_INL_X___`) с нечувствительностью к пробелам, которые могут вставлять переводчики.
+### 🤖 Сторонние ИИ-модели (AI Bridge + GUI):
+- **Встроенный графический менеджер моделей**:
+  - В главное окно русификатора добавлена кнопка **«Сторонние ИИ-модели (AI Bridge)»**.
+  - Удобный диалог добавления и настройки провайдеров: **Ollama (локальный)**, **DeepSeek**, **OpenAI**, **OpenRouter**, **Custom**.
+  - Быстрая проверка подключения к API моделей по кнопке «⚡ Проверить API».
+- **Локальный шлюз-транслятор (AI Bridge)**:
+  - Автономный высокоскоростной сервер на C# (.NET HttpListener), преобразующий запросы Gemini API (`generateContent` / `streamGenerateContent`) в формат OpenAI-совместимых эндпоинтов (`/v1/chat/completions`).
+  - Полноценная поддержка стриминга (SSE) и передачи ролей/сообщений.
+- **Разблокировка интерфейса кастомных моделей в Antigravity**:
+  - В селекторе моделей Antigravity активирована вкладка **«Custom»** и кнопка **«+ Добавить модель»**.
+  - Модели сохраняются реактивно и персистентно в `localStorage`.
+  - В `languageServer.js` добавлена поддержка динамической переадресации через переменную окружения `AGY_API_SERVER_URL`.
 
-### 📋 Локализация счетчиков изменений и карточек файлов:
-- **Динамический морфологический перевод паттернов файлов**:
-  - `4files changed` / `4 files changed` ➔ «4 изменённых файла» (с правильными окончаниями в русском языке: «1 изменённый файл», «2-4 изменённых файла», «5+ изменённых файлов»).
-  - Добавлены регулярные выражения для `files created` («Создано файлов»), `files deleted` («Удалено файлов»), `files modified` («Изменено файлов»), `lines added` («Добавлено строк»), `lines removed` («Удалено строк»), `lines changed` («Изменено строк»), `edits`, `changes`.
-- **Русификация панели Review / Diff View**:
-  - В заголовках групп и аккордеонов переведены: `Files Changed` («Изменённые файлы»), `Agent Edits` («Правки агента»), `Staged Changes` («Индексированные изменения»), `Branch Changes` («Изменения ветки»), `Review Changes` («Просмотр изменений»).
-  - Системные статусы: `No file changes` / `No files changed` («Файлы не изменены»), `Failed to fetch diffs` («Не удалось получить список изменений»), `No workspaces open.` («Нет открытых рабочих областей.»).
+### 🌐 Русификация и исправления:
+- Обновлены и отполированы переводы интерфейса добавления моделей («Название модели», «URL модели», «Лимит токенов до сжатия» и подсказки).
 
 ---
 
@@ -186,7 +186,7 @@ release_body = f"""# Google Antigravity Localizer v{new_tag} — Live Translator
 
 ## ⚡ Установка:
 1. Скачайте **`{installer_exe_name}`** ниже.
-2. Запустите установщик — он обновит компоненты русификации и бандла до версии v{new_tag}.
+2. Запустите установщик — он обновит русификатор и установит AI Bridge v{new_tag}.
 """
 
 req_data = {
@@ -246,13 +246,13 @@ try:
         spec.loader.exec_module(tg_client)
 
         print("[*] Отправка анонса и файла в Telegram через tg_client (тема «Разработочная»)...")
-        tg_text = f"""🌐 <b>Вышел релиз Google Antigravity Localizer v{new_tag}!</b>
+        tg_text = f"""🤖 <b>Вышел релиз Google Antigravity Localizer v{new_tag}!</b>
 
 ✨ <b>Что нового в v{new_tag}:</b>
-• <b>Восстановлен онлайн-переводчик ответов ИИ</b>: добавлен многоуровневый каскад эндпоинтов Google Translate (clients5/3/1, gtx, mymemory) с автоматическим обходом блокировок и HTTP 429
-• <b>Безопасный парсинг перевода</b>: устранены артефакты, суффиксы и ошибки переполнения URL для больших текстов
-• <b>Локализация счетчиков изменений</b>: <code>4files changed</code> / <code>4 files changed</code> ➔ «4 изменённых файла» (с корректными склонениями для 1, 2-4, 5+ файлов)
-• <b>Перевод панели изменений (Diff / Review)</b>: «Изменённые файлы» (Files Changed), «Правки агента» (Agent Edits), «Индексированные изменения» (Staged Changes), «Файлы не изменены» (No file changes) и др.
+• <b>Поддержка сторонних ИИ-моделей (AI Bridge)</b>: теперь можно подключать локальные и облачные модели через API (Ollama, DeepSeek, OpenAI, OpenRouter и любые совместимые)
+• <b>Графический интерфейс управления моделями</b>: удобная форма добавления моделей, ввода API-ключей и проверки соединения прямо в приложении
+• <b>Разблокирован встроенный UI Antigravity</b>: активна кнопка «+ Добавить модель» с персистентным сохранением
+• <b>Локальный мост-транслятор</b>: прозрачная трансляция вызовов в фоновом режиме с поддержкой потокового вывода (SSE)
 
 📦 <b>GitHub Release:</b> <a href="https://github.com/j46871417-ui/Antigravity-Localizer/releases/tag/{new_tag}">v{new_tag}</a>
 💾 <b>Установщик: <code>{installer_exe_name}</code> прикреплён ниже 👇</b>"""
