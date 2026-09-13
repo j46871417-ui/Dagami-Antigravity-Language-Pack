@@ -17,14 +17,14 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Open Source")]
 [assembly: AssemblyProduct("Google Antigravity Localizer")]
 [assembly: AssemblyCopyright("Copyright (c) 2026")]
-[assembly: AssemblyVersion("0.0.13.0")]
-[assembly: AssemblyFileVersion("0.0.13.0")]
+[assembly: AssemblyVersion("0.0.14.0")]
+[assembly: AssemblyFileVersion("0.0.14.0")]
 
 namespace AntigravityLocalizer
 {
     public static class AppConfig
     {
-        public const string Version = "0.0.13";
+        public const string Version = "0.0.14";
     }
 
     static class Program

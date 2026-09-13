@@ -27,7 +27,7 @@ repo_api = 'https://api.github.com/repos/j46871417-ui/Antigravity-Localizer'
 if len(sys.argv) > 1:
     new_tag = sys.argv[1].strip()
 else:
-    new_tag = "0.0.13"
+    new_tag = "0.0.14"
 
 print(f"[*] Target release tag: {new_tag}")
 
@@ -135,11 +135,15 @@ subprocess.run([
     "antigravity_localizer.py",
     "install.ps1",
     ".github/workflows/build.yml",
+    "resources/web_bundle_ru/i18n-ru.js",
+    "resources/web_bundle_ru/main.js",
+    "translations/chat_strings.json",
+    "translations/dom_translator.js",
     "publish_new_release.py"
 ], cwd=repo_root, check=False)
 subprocess.run([
     "git", "commit", "-m",
-    f"fix(security): atomic ASAR write, safe JS string replacement, JSON validation, process polling, and install.ps1 SHA256 (v{new_tag})"
+    f"fix: restore online translator with multi-tier failover & localize files changed and review diffs (v{new_tag})"
 ], cwd=repo_root, check=False)
 subprocess.run(["git", "push", "origin", "main"], cwd=repo_root, check=False)
 
@@ -148,38 +152,29 @@ subprocess.run(["git", "tag", "-a", new_tag, "-m", f"Release {new_tag}"], cwd=re
 subprocess.run(["git", "push", "origin", new_tag], cwd=repo_root, check=False)
 
 # 8. Create GitHub Release
-release_title = f"Google Antigravity Localizer v{new_tag} - Security & Reliability Patch"
-release_body = f"""# Google Antigravity Localizer v{new_tag} — Security & Reliability Patch
+release_title = f"Google Antigravity Localizer v{new_tag} - Live Translator & Diffs Fix"
+release_body = f"""# Google Antigravity Localizer v{new_tag} — Live Translator & Diffs Fix
 
-Критическое обновление безопасности и стабильности русификатора **Google Antigravity**:
+Срочное обновление с восстановлением онлайн-перевода ответов ИИ и локализацией списков изменений файлов:
 
-### 🛡️ Безопасность и целостность данных:
-- **Атомарная запись архивов ASAR (`write_asar_atomic`)**:
-  - Исключена вероятность повреждения `app.asar` при внезапном сбое питания или обрыве процесса: запись теперь ведется во временный файл в том же томе файловой системы с вызовом `os.fsync`.
-  - Замена файла производится атомарной операцией `os.replace`.
-  - Добавлена предварительная валидация расчетного размера архива и строгая проверка UTF-8 перед модификацией файлов.
-  - При возникновении ошибки выполняется гарантированный автоматический откат (rollback) к исходному бэкапу.
+### 🌐 Восстановление и усиление онлайн-переводчика (Live AI Translator):
+- **Многоуровневый отказоустойчивый стек (Multi-Tier Failover)**:
+  - Устранена проблема блокировки/HTTP 429 от Google Translate `client=gtx` при серийных запросах.
+  - Добавлена каскадная система эндпоинтов с мгновенным переключением при сбоях: `clients5.google.com` ➔ `clients3.google.com` ➔ `clients1.google.com` ➔ `translate.googleapis.com` ➔ `api.mymemory.translated.net`.
+  - Внедрен жесткий таймаут (`AbortController` 3.5 сек), благодаря чему недоступные или зависшие серверы не блокируют интерфейс.
+- **Корректный парсинг и очистка ответов**:
+  - Исправлена конкатенация массивов ответов Google Translate (устранены прилипающие служебные суффиксы `,en`).
+  - Умное дробление длинных сообщений на безопасные чанки (< 1800 символов), исключающее ошибки `414 URI Too Long`.
+- **Помехоустойчивое сохранение разметки и кода**:
+  - Толерантное восстановление инлайн-кода и блоков кода (`___AG_CODE_X___`, `___AG_INL_X___`) с нечувствительностью к пробелам, которые могут вставлять переводчики.
 
-- **Безопасная контекстно-зависимая замена строковых литералов в JS**:
-  - Внедрен regex-парсер с проверкой типов кавычек и границ выражений (`replace_js_string_literals`).
-  - Защищены ключи объектов JS/JSON (`"key":`), свойства объектов (`obj.key`), вызовы функций и методов.
-  - Добавлен черный список системных идентификаторов (URL, пути, команды `vscode.*`, `antigravity.*`, расширения файлов), предотвращающий их случайную модификацию.
-
-- **Строгая пост-патч валидация JSON/JSONC**:
-  - Реализовано безопасное удаление комментариев (`//` и `/* */`) перед валидацией VS Code-конфигов (`strip_json_comments`).
-  - После модификации `argv.json` и `package.json` производится обязательный обратный парсинг (`json.loads` / `ConvertFrom-Json`). При ошибках синтаксиса файл немедленно восстанавливается из резервной копии.
-
-- **Надежный polling процессов и проверка файловых блокировок**:
-  - Заменены жесткие задержки `sleep` на активный опрос процессов (`tasklist` / `Get-Process`) с таймаутом до 5 секунд.
-  - Добавлена функция `wait_for_files_unlocked`, ожидающая освобождения файловых дескрипторов приложением до 10 секунд перед операциями записи.
-
-- **Усиление безопасности PowerShell-установщика (`install.ps1`)**:
-  - Добавлен параметр `$ExpectedHash` для проверки подлинности и целостности скачиваемого ZIP-архива по алгоритму **SHA256** перед распаковкой.
-  - Весь процесс обернут в корневой блок `try ... finally`, гарантирующий удаление временных файлов и директорий при любом исходе.
-  - Добавлен polling проверки блокировки `app.asar` перед копированием.
-
-- **Синхронизация CI/CD**:
-  - GitHub Actions Workflow обновлен до актуального **Python 3.13**.
+### 📋 Локализация счетчиков изменений и карточек файлов:
+- **Динамический морфологический перевод паттернов файлов**:
+  - `4files changed` / `4 files changed` ➔ «4 изменённых файла» (с правильными окончаниями в русском языке: «1 изменённый файл», «2-4 изменённых файла», «5+ изменённых файлов»).
+  - Добавлены регулярные выражения для `files created` («Создано файлов»), `files deleted` («Удалено файлов»), `files modified` («Изменено файлов»), `lines added` («Добавлено строк»), `lines removed` («Удалено строк»), `lines changed` («Изменено строк»), `edits`, `changes`.
+- **Русификация панели Review / Diff View**:
+  - В заголовках групп и аккордеонов переведены: `Files Changed` («Изменённые файлы»), `Agent Edits` («Правки агента»), `Staged Changes` («Индексированные изменения»), `Branch Changes` («Изменения ветки»), `Review Changes` («Просмотр изменений»).
+  - Системные статусы: `No file changes` / `No files changed` («Файлы не изменены»), `Failed to fetch diffs` («Не удалось получить список изменений»), `No workspaces open.` («Нет открытых рабочих областей.»).
 
 ---
 
@@ -191,7 +186,7 @@ release_body = f"""# Google Antigravity Localizer v{new_tag} — Security & Reli
 
 ## ⚡ Установка:
 1. Скачайте **`{installer_exe_name}`** ниже.
-2. Запустите установщик — он корректно закроет процессы Antigravity, проверит блокировки и установит обновленные компоненты.
+2. Запустите установщик — он обновит компоненты русификации и бандла до версии v{new_tag}.
 """
 
 req_data = {
@@ -251,15 +246,13 @@ try:
         spec.loader.exec_module(tg_client)
 
         print("[*] Отправка анонса и файла в Telegram через tg_client (тема «Разработочная»)...")
-        tg_text = f"""🛡️ <b>Вышел патч безопасности Google Antigravity Localizer v{new_tag}!</b>
+        tg_text = f"""🌐 <b>Вышел релиз Google Antigravity Localizer v{new_tag}!</b>
 
-✨ <b>Ключевые исправления безопасности и стабильности:</b>
-• <b>Атомарная запись ASAR</b>: запись в temp-файл с <code>os.fsync</code> и атомарной заменой <code>os.replace</code>, защита от повреждения архивов и автоматический rollback
-• <b>Контекстная замена JS-строк</b>: защита ключей объектов (<code>"key":</code>), свойств (<code>obj.key</code>) и методов; фильтрация системных идентификаторов по черному списку
-• <b>Пост-патч валидация JSON/JSONC</b>: поддержка комментариев в <code>argv.json</code> и обязательная обратная валидация с откатом при сбое
-• <b>Надежный polling процессов</b>: активное ожидание закрытия процессов и снятия файловых блокировок (до 10с)
-• <b>Безопасность инсталлятора PowerShell</b>: проверка контрольной суммы архива SHA256 и гарантированная очистка временных папок в блоке <code>finally</code>
-• <b>CI/CD</b>: синхронизация с актуальным Python 3.13
+✨ <b>Что нового в v{new_tag}:</b>
+• <b>Восстановлен онлайн-переводчик ответов ИИ</b>: добавлен многоуровневый каскад эндпоинтов Google Translate (clients5/3/1, gtx, mymemory) с автоматическим обходом блокировок и HTTP 429
+• <b>Безопасный парсинг перевода</b>: устранены артефакты, суффиксы и ошибки переполнения URL для больших текстов
+• <b>Локализация счетчиков изменений</b>: <code>4files changed</code> / <code>4 files changed</code> ➔ «4 изменённых файла» (с корректными склонениями для 1, 2-4, 5+ файлов)
+• <b>Перевод панели изменений (Diff / Review)</b>: «Изменённые файлы» (Files Changed), «Правки агента» (Agent Edits), «Индексированные изменения» (Staged Changes), «Файлы не изменены» (No file changes) и др.
 
 📦 <b>GitHub Release:</b> <a href="https://github.com/j46871417-ui/Antigravity-Localizer/releases/tag/{new_tag}">v{new_tag}</a>
 💾 <b>Установщик: <code>{installer_exe_name}</code> прикреплён ниже 👇</b>"""
@@ -269,7 +262,7 @@ try:
             print(f"[*] Загрузка {installer_exe_name} в Telegram...")
             tg_client.send_document(
                 installer_exe_path,
-                caption=f"🛡️ <b>{installer_exe_name}</b>\n(Патч безопасности и стабильности v{new_tag})"
+                caption=f"🌐 <b>{installer_exe_name}</b>\n(Восстановление онлайн-переводчика + локализация диффов и файлов)"
             )
             print("[+] Файл и анонс успешно опубликованы в Telegram!")
     else:

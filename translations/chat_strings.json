@@ -10,5 +10,12 @@
     "Planning": "Планирование",
     "Thinking": "Рассуждения",
     "Add context": "Добавить контекст",
-    "Review required": "Требуется проверка"
+    "Review required": "Требуется проверка",
+    "Agent Edits": "Правки агента",
+    "Staged Changes": "Индексированные изменения",
+    "Review Changes": "Просмотр изменений",
+    "No file changes": "Файлы не изменены",
+    "No files changed": "Файлы не изменены",
+    "Failed to fetch diffs": "Не удалось получить список изменений",
+    "No workspaces open.": "Нет открытых рабочих областей."
 }

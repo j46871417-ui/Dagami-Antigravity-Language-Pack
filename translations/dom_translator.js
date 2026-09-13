@@ -1072,8 +1072,38 @@
       replace: function (m) { return m[1] + " задач(и)"; }
     },
     {
-      regex: /^(\d+)\s+files? changed$/i,
+      regex: /^(\d+)\s*files?\s*changed$/i,
+      replace: function (m) {
+        var n = parseInt(m[1], 10);
+        var w = 'изменённых файлов';
+        if (n % 10 === 1 && n % 100 !== 11) w = 'изменённый файл';
+        else if ([2, 3, 4].indexOf(n % 10) !== -1 && [12, 13, 14].indexOf(n % 100) === -1) w = 'изменённых файла';
+        return n + ' ' + w;
+      }
+    },
+    {
+      regex: /^(\d+)\s*files?\s*created$/i,
+      replace: function (m) { return "Создано файлов: " + m[1]; }
+    },
+    {
+      regex: /^(\d+)\s*files?\s*deleted$/i,
+      replace: function (m) { return "Удалено файлов: " + m[1]; }
+    },
+    {
+      regex: /^(\d+)\s*files?\s*modified$/i,
       replace: function (m) { return "Изменено файлов: " + m[1]; }
+    },
+    {
+      regex: /^(\d+)\s*lines?\s*added$/i,
+      replace: function (m) { return "Добавлено строк: " + m[1]; }
+    },
+    {
+      regex: /^(\d+)\s*lines?\s*removed$/i,
+      replace: function (m) { return "Удалено строк: " + m[1]; }
+    },
+    {
+      regex: /^(\d+)\s*lines?\s*changed$/i,
+      replace: function (m) { return "Изменено строк: " + m[1]; }
     },
     {
       regex: /^(\d+)\s+agents? running$/i,
