@@ -11,8 +11,8 @@ powershell -ExecutionPolicy Bypass -Command "if (Test-Path payload.zip) { Remove
 echo [*] Компиляция через системный csc.exe...
 C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:winexe /optimize+ /platform:anycpu /r:System.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:System.Core.dll /r:System.Web.Extensions.dll /resource:payload.zip,payload.zip /out:AntigravityLocalizer.exe Program.cs
 
-if exist AntigravityLocalizer.exe copy /y AntigravityLocalizer.exe AntigravityLocalizer_v0.9.2.exe
+if exist AntigravityLocalizer.exe copy /y AntigravityLocalizer.exe AntigravityLocalizer_v0.9.5.exe
 
 if exist payload.zip del payload.zip
 echo.
-echo [✓] Готово! Создан чистый автономный AntigravityLocalizer.exe и AntigravityLocalizer_v0.9.2.exe
+echo [✓] Готово! Создан чистый автономный AntigravityLocalizer.exe и AntigravityLocalizer_v0.9.5.exe
