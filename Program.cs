@@ -19,14 +19,14 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Open Source Community")]
 [assembly: AssemblyProduct("Google Antigravity Localizer")]
 [assembly: AssemblyCopyright("Copyright (c) 2026")]
-[assembly: AssemblyVersion("0.9.5.0")]
-[assembly: AssemblyFileVersion("0.9.5.0")]
+[assembly: AssemblyVersion("0.9.7.0")]
+[assembly: AssemblyFileVersion("0.9.7.0")]
 
 namespace AntigravityLocalizer
 {
     public static class AppConfig
     {
-        public const string Version = "0.9.3";
+        public const string Version = "0.9.7";
         public const string TelegramChatUrl = "https://t.me/+8qU7020rMF84OWNi";
     }
 
@@ -41,32 +41,38 @@ namespace AntigravityLocalizer
         [STAThread]
         static void Main()
         {
-            bool createdNew;
-            using (Mutex mutex = new Mutex(true, "Global\\AntigravityLocalizer_SingleInstance_Mutex", out createdNew))
+            try
             {
-                if (!createdNew)
+                Process current = Process.GetCurrentProcess();
+                Process[] existing = Process.GetProcessesByName(current.ProcessName);
+                foreach (Process p in existing)
                 {
-                    BringExistingInstanceToFront();
-                    return;
+                    if (p.Id != current.Id)
+                    {
+                        if (p.MainWindowHandle != IntPtr.Zero)
+                        {
+                            ShowWindow(p.MainWindowHandle, 9); // SW_RESTORE
+                            SetForegroundWindow(p.MainWindowHandle);
+                            return;
+                        }
+                        else
+                        {
+                            try { p.Kill(); } catch { }
+                        }
+                    }
                 }
 
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
                 Application.Run(new MainForm());
             }
-        }
-
-        private static void BringExistingInstanceToFront()
-        {
-            Process current = Process.GetCurrentProcess();
-            foreach (Process process in Process.GetProcessesByName(current.ProcessName))
+            catch (Exception ex)
             {
-                if (process.Id != current.Id && process.MainWindowHandle != IntPtr.Zero)
-                {
-                    ShowWindow(process.MainWindowHandle, 9); // SW_RESTORE
-                    SetForegroundWindow(process.MainWindowHandle);
-                    break;
-                }
+                MessageBox.Show("Ошибка запуска патчера: " + ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                Environment.Exit(0);
             }
         }
     }
@@ -742,6 +748,12 @@ namespace AntigravityLocalizer
                     }
                 }));
             });
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            base.OnFormClosed(e);
+            Environment.Exit(0);
         }
     }
 
