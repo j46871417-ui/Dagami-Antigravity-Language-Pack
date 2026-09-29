@@ -10,7 +10,26 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # Тесты используют только стандартную библиотеку (unittest), поэтому
+      # здесь намеренно нет ни установки зависимостей, ни requirements-dev.
+      - name: Run unit tests
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python -m unittest discover -s tests -t .
+
   build:
+    needs: test
     runs-on: windows-latest
     steps:
       - name: Checkout repository
