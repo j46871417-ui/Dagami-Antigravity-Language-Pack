@@ -223,6 +223,38 @@ def main():
 2. Запустите установщик — он обновит русификатор и установит AI Bridge v{new_tag}.
 """
 
+    # F-022/F-023: проверить ВСЕ артефакты ДО создания релиза.
+    #
+    # Раньше релиз создавался (POST /releases ниже), и только потом каждый
+    # файл проверялся через os.path.exists перед загрузкой. Если чего-то не
+    # было — релиз уже опубликован, но без вложений, и пользователь видит
+    # страницу без файлов. Хуже: скрипт печатал успех.
+    #
+    # Теперь отсутствие любого артефакта — отказ ДО необратимого POST.
+    artifacts = [
+        (standard_exe_path, "AntigravityLocalizer.exe"),
+        (standalone_exe_path, standalone_exe_name),
+    ]
+    if iscc_exe:
+        artifacts.append((installer_exe_path, installer_exe_name))
+    bat_path = os.path.join(repo_root, "install.bat")
+    if os.path.exists(bat_path):
+        artifacts.append((bat_path, "install.bat"))
+
+    missing = [p for p, _n in artifacts if not os.path.exists(p)]
+    if missing:
+        sys.stderr.write(
+            "[-] Сборка неполная, релиз НЕ создан:\n"
+            + "".join(f"    отсутствует: {p}\n" for p in missing)
+            + "    Запустите сборку заново; Inno Setup нужен для инсталлятора "
+              "(ISCC_PATH или установленный ISCC.exe).\n"
+        )
+        return 3
+
+    print(f"[*] Артефактов к загрузке: {len(artifacts)}")
+    for _p, _n in artifacts:
+        print(f"    - {_n} ({os.path.getsize(_p):,} bytes)")
+
     req_data = {
         "tag_name": new_tag,
         "name": release_title,
@@ -260,15 +292,9 @@ def main():
         res_up = json.loads(urllib.request.urlopen(req_upload).read().decode('utf-8'))
         print(f"[+] Uploaded {name} ({res_up.get('size')} bytes)")
 
-    # Upload primary installer, standalone, and standard exe
-    if os.path.exists(installer_exe_path):
-        upload_asset(installer_exe_path, installer_exe_name)
-    if os.path.exists(standalone_exe_path):
-        upload_asset(standalone_exe_path, standalone_exe_name)
-    upload_asset(standard_exe_path, "AntigravityLocalizer.exe")
-    bat_path = os.path.join(repo_root, "install.bat")
-    if os.path.exists(bat_path):
-        upload_asset(bat_path, "install.bat")
+    # Загрузка строго по проверенному списку: всё уже существует (см. guard выше).
+    for _path, _name in artifacts:
+        upload_asset(_path, _name)
 
     # 9. Broadcast to Telegram via tg_client.py
     try:
