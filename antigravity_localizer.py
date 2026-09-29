@@ -25,6 +25,11 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
+# Единая авторитетная реализация замены JS-литералов (F-001/F-026).
+# Импорт обязателен явно: PyInstaller не находит его по анализу вызовов,
+# если обращаться через локальную обёртку.
+import js_literals as jsl
+
 # Пути к встроенным ресурсам (совместимо с PyInstaller _MEIPASS)
 if getattr(sys, "frozen", False):
     BUNDLE_DIR = Path(sys._MEIPASS)
@@ -299,48 +304,44 @@ def strip_json_comments(text: str) -> str:
     return re.sub(pattern, replacer, text)
 
 
+PRELOAD_MARKER = "// Antigravity UI Runtime Localizer"
+
+
+def inject_dom_translator(preload_text: str, dom_script: str) -> str:
+    """
+    Идемпотентно внедряет движок русификации в конец preload.js.
+
+    Контракт идемпотентности (F-002): повторный вызов на уже пропатченном тексте
+    даёт байт-в-байт тот же результат. Достигается тем, что
+    translations/dom_translator.js начинается с PRELOAD_MARKER, и мы отрезаем
+    всё начиная с этого маркера перед повторной вставкой. Без маркера в исходнике
+    каждая установка добавляла бы ещё одну полную копию движка, а app.asar
+    раздувался бы на ~60 КБ за запуск.
+
+    Если маркера нет ни в preload, ни в dom_script — внедрение всё равно
+    происходит (совместимость со старым dom_translator.js), но идемпотентность
+    не гарантируется; это осознанный компромисс, а не недосмотр.
+    """
+    if PRELOAD_MARKER in preload_text:
+        preload_text = preload_text[:preload_text.index(PRELOAD_MARKER)]
+    # rstrip делается ВСЕГДА, а не только на ветке с маркером: иначе первая
+    # установка на preload.js, заканчивающийся переводом строки, даёт лишний
+    # '\n' (три подряд вместо двух), и первая установка отличается по размеру
+    # от всех последующих. Это тот же класс дефекта, что и F-002.
+    return preload_text.rstrip() + "\n\n" + dom_script
+
+
 def replace_js_string_literals(content: str, string_map: dict[str, str], log_fn=safe_print) -> tuple[str, int]:
     """
     Контекстно-зависимая замена строковых литералов в JS-коде.
-    Заменяет исключительно литералы в одинарных, двойных или обратных кавычках,
-    не затрагивая имена переменных, ключи объектов (key: value), пути импортов и директивы.
+
+    Делегирует в js_literals.py — единую авторитетную реализацию, которую
+    использует и patch_ide.py. Раньше здесь была вторая, расходящаяся копия
+    логики: она не экранировала обратный слэш и ${ в backtick-литералах (F-026).
+    Публичное имя и сигнатура сохранены для обратной совместимости.
     """
-    changes = 0
-    # Черный список: служебные идентификаторы, протоколы, расширения и системные пути
-    blacklist_patterns = (
-        "vscode.", "antigravity.", "http://", "https://", "file://",
-        ".js", ".json", ".ts", ".node", "/", "\\"
-    )
+    return jsl.replace_js_string_literals(content, string_map, log_fn=log_fn)
 
-    for en_s, ru_s in string_map.items():
-        if not en_s or not isinstance(en_s, str) or en_s == ru_s:
-            continue
-
-        # Пропуск системных идентификаторов
-        if any(bp in en_s for bp in blacklist_patterns) and not (" " in en_s or en_s.endswith(":") or en_s.endswith(".")):
-            log_fn(f"  [Контекстный фильтр] Пропуск потенциального системного идентификатора: '{en_s}'")
-            continue
-
-        # Поиск строкового литерала в кавычках с проверкой, что это не ключ объекта (без ':' сразу после кавычки)
-        escaped_en = re.escape(en_s)
-        # Шаблон: кавычка, текст, кавычка, и после кавычки нет двоеточия (что исключает "prop": val)
-        pattern = re.compile(r'(?<![a-zA-Z0-9_\$\.\:])(["\'`])' + escaped_en + r'\1(?!\s*:)')
-
-        def make_repl(quote_match):
-            q = quote_match.group(1)
-            # Экранируем кавычку того же типа внутри русского перевода, если она там есть
-            escaped_ru = ru_s.replace(q, f"\\{q}") if q != '`' else ru_s
-            return f"{q}{escaped_ru}{q}"
-
-        new_content, count = pattern.subn(make_repl, content)
-        if count > 0:
-            content = new_content
-            changes += count
-        elif en_s in content:
-            # Найдено в тексте, но не в виде чистого литерала (например ключ или часть составного идентификатора)
-            log_fn(f"  [Контекстный фильтр] Строка '{en_s}' пропущена: используется как ключ объекта или имя свойства.")
-
-    return content, changes
 
 class AntigravityLocalizer:
     def __init__(self, ide_path: Path = None, desktop_path: Path = None, ide_user_data: Path = None, log_fn=safe_print):
@@ -601,10 +602,7 @@ class AntigravityLocalizer:
                         with open(DOM_TRANSLATOR_FILE, "r", encoding="utf-8") as f:
                             dom_script = f.read()
                         preload_text = file_bytes.decode("utf-8")
-                        marker = "// Antigravity UI Runtime Localizer"
-                        if marker in preload_text:
-                            preload_text = preload_text[:preload_text.index(marker)].rstrip()
-                        preload_text += "\n\n" + dom_script
+                        preload_text = inject_dom_translator(preload_text, dom_script)
                         file_bytes = preload_text.encode("utf-8")
                         changes += 1
                         self.log("[Desktop] Внедрён движок динамической русификации интерфейса в dist/preload.js")

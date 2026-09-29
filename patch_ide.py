@@ -18,16 +18,21 @@ import shutil
 import sys
 import os
 import re
+import tempfile
 from pathlib import Path
+
+from js_literals import replace_js_string_literals
 
 # ===== Пути =====
 SCRIPT_DIR = Path(__file__).parent
 TRANSLATIONS_FILE = SCRIPT_DIR / "translations" / "ide_strings.json"
 
 # Antigravity IDE extension paths
-IDE_BASE = Path(os.environ.get(
-    "ANTIGRAVITY_IDE_PATH",
-    r"C:\Users\gabov\AppData\Local\Programs\Antigravity IDE"
+# Путь по умолчанию выводится из LOCALAPPDATA, а не из абсолютной строки с именем
+# конкретного пользователя (F-013). ANTIGRAVITY_IDE_PATH остаётся приоритетным.
+IDE_BASE = Path(os.environ.get("ANTIGRAVITY_IDE_PATH") or (
+    Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
+    / "Programs" / "Antigravity IDE"
 ))
 EXTENSION_DIR = IDE_BASE / "resources" / "app" / "extensions" / "antigravity"
 PACKAGE_JSON = EXTENSION_DIR / "package.json"
@@ -134,8 +139,23 @@ def patch_package_json(translations: dict, dry_run: bool = False) -> int:
 
     if not dry_run and changes > 0:
         backup_file(PACKAGE_JSON)
-        with open(PACKAGE_JSON, "w", encoding="utf-8") as f:
-            json.dump(pkg, f, ensure_ascii=False)
+        # Атомарная запись: обрыв на середине json.dump оставит IDE без манифеста,
+        # а VS Code не стартует с битым package.json расширения.
+        fd, tmp_name = tempfile.mkstemp(
+            dir=str(PACKAGE_JSON.parent), prefix=PACKAGE_JSON.name + ".", suffix=".tmp"
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
+                json.dump(pkg, f, ensure_ascii=False)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_name, PACKAGE_JSON)
+        except BaseException:
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                pass
+            raise
         print(f"  Saved {PACKAGE_JSON}")
 
     return changes
@@ -153,23 +173,36 @@ def patch_extension_js(translations: dict, dry_run: bool = False) -> int:
     with open(EXTENSION_JS, "r", encoding="utf-8") as f:
         content = f.read()
 
-    changes = 0
-    for en_text, ru_text in ui_strings.items():
-        # Ищем строку в кавычках (двойных или одинарных)
-        for quote in ['"', "'"]:
-            pattern = f'{quote}{re.escape(en_text)}{quote}'
-            replacement = f'{quote}{ru_text}{quote}'
-            if pattern in content:
-                count = content.count(pattern)
-                print(f"  [{count}x] '{en_text}' -> '{ru_text}'")
-                if not dry_run:
-                    content = content.replace(pattern, replacement)
-                changes += count
+    if dry_run:
+        # Содержимое не меняется, но число совпадений считаем честно —
+        # тем же движком, что и при реальном патче (иначе dry-run врёт).
+        _, changes = replace_js_string_literals(content, ui_strings)
+        return changes
 
-    if not dry_run and changes > 0:
+    # Единая авторитетная реализация (js_literals.py): корректно экранирует
+    # кавычки, обратный слэш, backtick и ${ в переводе (F-001, F-026),
+    # не трогает ключи объектов ("key": value) и системные идентификаторы.
+    content, changes = replace_js_string_literals(content, ui_strings, log_fn=print)
+
+    if changes > 0:
         backup_file(EXTENSION_JS)
-        with open(EXTENSION_JS, "w", encoding="utf-8") as f:
-            f.write(content)
+        # Атомарная запись: частично записанный extension.js = нерабочая IDE.
+        fd, tmp_name = tempfile.mkstemp(
+            dir=str(EXTENSION_JS.parent), prefix=EXTENSION_JS.name + ".", suffix=".tmp"
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
+                f.write(content)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_name, EXTENSION_JS)
+        except BaseException:
+            # Не оставляем мусорный .tmp рядом с рабочим расширением.
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                pass
+            raise
         print(f"  Saved {EXTENSION_JS}")
 
     return changes

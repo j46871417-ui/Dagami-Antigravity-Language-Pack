@@ -23,9 +23,14 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).parent
 TRANSLATIONS_FILE = SCRIPT_DIR / "translations" / "desktop_strings.json"
 
-APP_BASE = Path(os.environ.get(
-    "ANTIGRAVITY_APP_PATH",
-    r"C:\Users\gabov\AppData\Local\Programs\antigravity"
+# Путь по умолчанию выводится из LOCALAPPDATA, а не из абсолютной строки с именем
+# конкретного пользователя (F-013): захардкоженный путь работал только у автора и
+# молча вёл в никуда на любой другой машине. Приоритет: ANTIGRAVITY_APP_PATH ->
+# LOCALAPPDATA -> ~\AppData\Local. Параметр ANTIGRAVITY_APP_PATH сохранён, поэтому
+# поведение на машине автора не меняется.
+APP_BASE = Path(os.environ.get("ANTIGRAVITY_APP_PATH") or (
+    Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
+    / "Programs" / "antigravity"
 ))
 ASAR_FILE = APP_BASE / "resources" / "app.asar"
 BACKUP_FILE = ASAR_FILE.with_suffix(".asar.bak.original")
@@ -148,8 +153,11 @@ def patch_desktop(dry_run: bool = False) -> int:
                 preload_text = file_bytes.decode("utf-8", errors="replace")
                 marker = "// Antigravity UI Runtime Localizer"
                 if marker in preload_text:
-                    preload_text = preload_text[:preload_text.index(marker)].rstrip()
-                preload_text += "\n\n" + dom_script
+                    preload_text = preload_text[:preload_text.index(marker)]
+                # rstrip всегда: см. inject_dom_translator в antigravity_localizer.py.
+                # Иначе первая установка даёт лишний '\n' и отличается по размеру
+                # от всех последующих (F-002).
+                preload_text = preload_text.rstrip() + "\n\n" + dom_script
                 file_bytes = preload_text.encode("utf-8")
                 changes += 1
                 print("  [dist/preload.js]: Injected updated DOM Runtime Localizer")

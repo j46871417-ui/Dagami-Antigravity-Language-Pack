@@ -1,3 +1,8 @@
+// Antigravity UI Runtime Localizer
+// ^^^ ЭТУ СТРОКУ НЕ УДАЛЯТЬ И НЕ ПЕРЕСТАВЛЯТЬ.
+// Это маркер идемпотентности: patch_desktop.py и antigravity_localizer.py режут
+// preload.js по этому маркеру перед повторной вставкой движка. Без него каждая
+// установка добавляла бы в preload.js ещё одну полную копию движка (F-002).
 /**
  * Google Antigravity 2.0 — Russian Localization Engine (Open Source)
  * Автоматический перевод пользовательского интерфейса на русский язык.
