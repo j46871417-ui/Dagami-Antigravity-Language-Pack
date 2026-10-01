@@ -31,4 +31,6 @@ desktop.ini
 # чтобы отладочный мусор не попал в коммит).
 tests/_asar_tmp/
 tests/tmp/
+scratch/
+
 

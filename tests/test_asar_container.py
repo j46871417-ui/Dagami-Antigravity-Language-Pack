@@ -109,12 +109,11 @@ class TestRealAsarContainer(unittest.TestCase):
         raw = REAL_ASAR.read_bytes()
         u0, u1, u2, u3 = struct.unpack("<4I", raw[:16])
         self.assertEqual(u0, 4)
-        self.assertEqual(u1, 274148)
-        self.assertEqual(u2, 274144)
-        self.assertEqual(u3, 274140)
-        self.assertEqual(8 + u1, 274156)
-        self.assertEqual(16 + u3, 274156)
-        self.assertEqual(len(raw), 4500501)
+        pad_len = (4 - (u3 % 4)) % 4
+        self.assertEqual(u2, u3 + 4 + pad_len)
+        self.assertEqual(u1, u2 + 4)
+        self.assertEqual(8 + u1, 12 + u2)
+        self.assertGreater(len(raw), 16 + u1)
 
     def test_json_ends_exactly_at_u3(self):
         raw = REAL_ASAR.read_bytes()
@@ -126,10 +125,11 @@ class TestRealAsarContainer(unittest.TestCase):
         """Хеши из integrity должны совпасть с содержимым — прямая проверка базы."""
         header, _data = patch_desktop.read_asar(REAL_ASAR)
         raw = REAL_ASAR.read_bytes()
+        _u0, u1, _u2, _u3 = struct.unpack("<4I", raw[:16])
+        data_start = 8 + u1
         node = header["files"]["dist"]["files"]["preload.js"]
         offset, size = int(node["offset"]), int(node["size"])
-        self.assertEqual((offset, size), (154328, 4925))
-        chunk = raw[274156 + offset:274156 + offset + size]
+        chunk = raw[data_start + offset:data_start + offset + size]
         self.assertEqual(hashlib.sha256(chunk).hexdigest(), node["integrity"]["hash"])
         self.assertTrue(chunk.startswith(b'"use strict";'))
 
