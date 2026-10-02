@@ -571,41 +571,44 @@
 
 :scope {
   /* ============================================
-     BASE COLOUR PALETTE
+     BASE COLOUR PALETTE (AGY Light Mode Defaults)
      ============================================ */
 
   --sdk-color-white: #ffffff;
-  --sdk-color-black: #000000;
-  --sdk-color-surface: #f9f9f9;
-  --sdk-color-surface-alt: #f5f5f5;
-  --sdk-color-canvas: #e8e8e8;
-  --sdk-color-border-base: #e0e0e0;
-  --sdk-color-border-light: #f0f0f0;
-  --sdk-color-border-dark: #d0d0d0;
-  --sdk-color-border-hover: #999999;
-  --sdk-color-text-base: #111827;
-  --sdk-color-text-muted: #6b7280;
+  --sdk-color-black: #101010;
+  --sdk-color-surface: #ffffff;
+  --sdk-color-surface-alt: #f2f2f2;
+  --sdk-color-canvas: #f0f0f0;
+  --sdk-color-border-base: rgba(0, 0, 0, 0.08);
+  --sdk-color-border-light: rgba(0, 0, 0, 0.05);
+  --sdk-color-border-dark: rgba(0, 0, 0, 0.14);
+  --sdk-color-border-hover: rgba(0, 0, 0, 0.22);
+  --sdk-color-text-base: #101010;
+  --sdk-color-text-muted: #6e6e6e;
+  --sdk-color-error: #dc2626;
 
   /* ============================================
      PRIMARY & SECONDARY COLOURS
      ============================================ */
 
-  --sdk-primary-color: #0066cc;
-  --sdk-primary-hover: #0052a3;
-  --sdk-primary-active: #003d7a;
-  --sdk-primary-light: #e6f2ff;
+  --sdk-primary: #007acc;
+  --sdk-primary-color: #007acc;
+  --sdk-primary-hover: #0062a3;
+  --sdk-primary-active: #004d80;
+  --sdk-primary-light: rgba(0, 122, 204, 0.1);
 
-  --sdk-secondary-color: #6c757d;
-  --sdk-secondary-hover: #5a6268;
-  --sdk-secondary-active: #545b62;
+  --sdk-secondary-color: #ececec;
+  --sdk-secondary-hover: #e2e2e2;
+  --sdk-secondary-active: #d6d6d6;
 
   /* ============================================
      BACKGROUNDS
      ============================================ */
 
+  --sdk-background-base: var(--sdk-color-white);
   --sdk-background-primary: var(--sdk-color-white);
-  --sdk-background-secondary: var(--sdk-color-surface);
-  --sdk-background-tertiary: var(--sdk-color-surface-alt);
+  --sdk-background-secondary: var(--sdk-color-surface-alt);
+  --sdk-background-tertiary: #ececec;
   --sdk-background-viewport: var(--sdk-color-canvas);
 
   /* ============================================
@@ -623,237 +626,262 @@
 
   --sdk-text-primary: var(--sdk-color-text-base);
   --sdk-text-secondary: var(--sdk-color-text-muted);
-  --sdk-text-muted: #9ca3af;
-  --sdk-text-disabled: #cccccc;
-  --sdk-text-error: #d32f2f;
-  --sdk-text-success: #2e7d32;
-  --sdk-text-warning: #f57c00;
-  --sdk-text-info: #0288d1;
-  --sdk-text-select: rgba(0, 100, 255, 0.2);
+  --sdk-text-muted: #8a8a8a;
+  --sdk-text-disabled: #b8b8b8;
+  --sdk-text-error: #dc2626;
+  --sdk-text-success: #16a34a;
+  --sdk-text-warning: #d97706;
+  --sdk-text-info: #007acc;
+  --sdk-text-select: rgba(0, 122, 204, 0.22);
 
   /* ============================================
      TOOLBAR
      ============================================ */
 
-  --sdk-toolbar-bg: var(--sdk-background-primary);
+  --sdk-toolbar-bg: var(--sdk-color-surface);
   --sdk-toolbar-border: var(--sdk-color-border-base);
   --sdk-toolbar-text: var(--sdk-color-text-base);
-  --sdk-toolbar-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --sdk-toolbar-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 
-  --sdk-toolbar-section-min-width: 200px;
-  --sdk-toolbar-btn-size: 2rem;           
-  --sdk-toolbar-page-input-width: 48px;   
-  --sdk-toolbar-zoom-input-width: 64px;  
-  --sdk-toolbar-separator-height: 20px;   
-  --sdk-toolbar-icon-size-nav: 16px;     
+  --sdk-toolbar-section-min-width: 160px;
+  --sdk-toolbar-btn-size: 24px;
+  --sdk-toolbar-page-input-width: 32px;
+  --sdk-toolbar-zoom-input-width: 44px;
+  --sdk-toolbar-separator-height: 16px;
+  --sdk-toolbar-icon-size-nav: 16px;
 
-  --sdk-toolbar-search-btn-size: 28px;    
-  --sdk-toolbar-search-min-width: 160px;  
-  --sdk-toolbar-search-expanded-width: 320px;
-  --sdk-toolbar-search-icon-size: 14px;   
+  --sdk-toolbar-search-btn-size: 28px;
+  --sdk-toolbar-search-min-width: 110px;
+  --sdk-toolbar-search-expanded-width: 110px;
+  --sdk-toolbar-search-icon-size: 14px;
   --sdk-toolbar-search-input-padding: 2px 0;
   --sdk-toolbar-search-nav-padding: 2px;
-  --sdk-toolbar-search-nav-icon-size: 14px; 
+  --sdk-toolbar-search-nav-icon-size: 14px;
 
-  --sdk-toolbar-legacy-btn-size: 32px;    
+  --sdk-toolbar-legacy-btn-size: 28px;
 
   /* ============================================
      SIDEBAR
      ============================================ */
 
-  --sdk-sidebar-bg: var(--sdk-background-primary);
+  --sdk-sidebar-bg: var(--sdk-color-surface);
   --sdk-sidebar-border: var(--sdk-border-color);
-  --sdk-sidebar-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --sdk-sidebar-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 
   /* ============================================
      BASE BUTTONS
      ============================================ */
 
-  --sdk-button-bg: #ffffff;
-  --sdk-button-border: #d0d0d0;
-  --sdk-button-text: #000000;
-  --sdk-button-hover-bg: #e8e8e8;
-  --sdk-button-disabled-opacity: 0.5;
+  --sdk-button-bg: transparent;
+  --sdk-button-border: transparent;
+  --sdk-button-text: var(--sdk-color-text-base);
+  --sdk-button-hover-bg: var(--sdk-secondary-color);
+  --sdk-button-disabled-opacity: 0.4;
 
   /* ============================================
      NAVIGATION & ZOOM BUTTONS
      ============================================ */
 
-  --sdk-nav-button-border-width: var(--sdk-border-width);
+  --sdk-nav-button-border-width: 1px;
   --sdk-nav-button-border-radius: var(--sdk-border-radius-md);
-  --sdk-nav-button-bg: #ece9e9;
-  --sdk-nav-button-border: var(--sdk-border-color);
+  --sdk-nav-button-bg: transparent;
+  --sdk-nav-button-border: transparent;
   --sdk-nav-button-color: var(--sdk-color-text-muted);
-  --sdk-nav-button-hover-bg: #f5f5f5;
-  --sdk-nav-button-hover-color: #374151;
-  --sdk-nav-button-active-bg: #e5e7eb;
-  --sdk-nav-input-bg: var(--sdk-background-secondary);
+  --sdk-nav-button-hover-bg: var(--sdk-secondary-color);
+  --sdk-nav-button-hover-color: var(--sdk-color-text-base);
+  --sdk-nav-button-active-bg: var(--sdk-secondary-hover);
+  --sdk-nav-input-bg: var(--sdk-color-surface-alt);
   --sdk-nav-input-color: var(--sdk-color-text-base);
 
   /* ============================================
-     ACTION / TOGGLE BUTTONS
+     ACTION / TOGGLE BUTTONS (AGY Ghost/Secondary Icon Buttons)
      ============================================ */
 
-  --sdk-action-button-bg: var(--sdk-background-primary);
-  --sdk-action-button-border: #ccccd6;
-  --sdk-action-button-color: #343846;
-  --sdk-action-button-hover-border: #b0b0ba;
-  --sdk-action-button-active-bg: #07875f;
-  --sdk-action-button-active-border: #07875f;
-  --sdk-action-button-active-color: var(--sdk-color-white);
+  --sdk-action-button-bg: transparent;
+  --sdk-action-button-border: transparent;
+  --sdk-action-button-color: var(--sdk-color-text-muted);
+  --sdk-action-button-hover-bg: var(--sdk-secondary-color);
+  --sdk-action-button-hover-color: var(--sdk-color-text-base);
+  --sdk-action-button-hover-border: transparent;
+  --sdk-action-button-active-bg: var(--sdk-secondary-hover);
+  --sdk-action-button-active-border: transparent;
+  --sdk-action-button-active-color: var(--sdk-color-text-base);
 
   /* ============================================
      SEARCH
      ============================================ */
 
-  --sdk-search-bg: var(--sdk-background-secondary);
-  --sdk-search-border: #e5e7eb;
+  --sdk-search-bg: var(--sdk-color-surface-alt);
+  --sdk-search-border: var(--sdk-color-border-base);
   --sdk-search-color: var(--sdk-color-text-base);
-  --sdk-search-placeholder: #9ca3af;
-  --sdk-search-focus-bg: var(--sdk-background-primary);
-  --sdk-search-focus-border: #d1d5db;
-  --sdk-search-focus-ring: rgba(59, 130, 246, 0.1);
-  --sdk-search-icon-color: #9ca3af;
+  --sdk-search-placeholder: #8a8a8a;
+  --sdk-search-focus-bg: var(--sdk-color-white);
+  --sdk-search-focus-border: rgba(0, 122, 204, 0.5);
+  --sdk-search-focus-ring: rgba(0, 122, 204, 0.15);
+  --sdk-search-icon-color: #8a8a8a;
 
   /* ============================================
      INPUTS
      ============================================ */
 
-  --sdk-input-bg: var(--sdk-background-primary);
-  --sdk-input-border: var(--sdk-border-color-dark);
-  --sdk-input-text: var(--sdk-color-black);
-  --sdk-input-placeholder: #999999;
+  --sdk-input-bg: var(--sdk-color-surface-alt);
+  --sdk-input-border: var(--sdk-color-border-base);
+  --sdk-input-text: var(--sdk-color-text-base);
+  --sdk-input-placeholder: #8a8a8a;
 
   /* ============================================
      THUMBNAILS
      ============================================ */
 
-  --sdk-thumbnail-bg: #d3d3d3;
+  --sdk-thumbnail-bg: rgba(0, 0, 0, 0.03);
   --sdk-thumbnail-border: transparent;
-  --sdk-thumbnail-border-hover: #1976d2;
-  --sdk-thumbnail-border-active: #1976d2;
-  --sdk-thumbnail-bg-active: #e3f2fd;
+  --sdk-thumbnail-border-hover: rgba(0, 122, 204, 0.6);
+  --sdk-thumbnail-border-active: var(--sdk-primary-color);
+  --sdk-thumbnail-bg-active: rgba(0, 122, 204, 0.08);
   --sdk-thumbnail-image-bg: var(--sdk-background-primary);
-  --sdk-thumbnail-number-color: #666666;
-  --sdk-thumbnail-number-active-color: #1976d2;
-  --sdk-thumbnail-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.1);
-  --sdk-thumbnail-shadow-active: 0 2px 8px rgba(25, 118, 210, 0.2);
+  --sdk-thumbnail-number-color: var(--sdk-color-text-muted);
+  --sdk-thumbnail-number-active-color: var(--sdk-primary-color);
+  --sdk-thumbnail-shadow-hover: 0 1px 4px rgba(0, 0, 0, 0.08);
+  --sdk-thumbnail-shadow-active: 0 1px 4px rgba(0, 122, 204, 0.15);
 
   /* ============================================
      SCROLLBAR
      ============================================ */
 
   --sdk-scrollbar-bg: var(--sdk-background-viewport);
-  --sdk-scrollbar-track-bg: var(--sdk-border-color);
-  --sdk-scrollbar-thumb-bg: #888888;
-  --sdk-scrollbar-thumb-hover: #666666;
-  --sdk-scrollbar-thumb-active: #555555;
+  --sdk-scrollbar-track-bg: rgba(0, 0, 0, 0.04);
+  --sdk-scrollbar-thumb-bg: rgba(0, 0, 0, 0.22);
+  --sdk-scrollbar-thumb-hover: rgba(0, 0, 0, 0.36);
+  --sdk-scrollbar-thumb-active: rgba(0, 0, 0, 0.48);
   --sdk-scrollbar-button-bg: transparent;
-  --sdk-scrollbar-button-color: #666666;
-  --sdk-scrollbar-indicator-color: #ffa500;
+  --sdk-scrollbar-button-color: var(--sdk-color-text-muted);
+  --sdk-scrollbar-indicator-color: #f59e0b;
   --sdk-scrollbar-indicator-hover-color: #d97706;
   /* scrollbar popover */
   --sdk-scrollbar-popover-min-width: 200px;
   --sdk-scrollbar-popover-width: auto;
   --sdk-scrollbar-popover-max-height-offset: 80px;
-  --sdk-scrollbar-popover-bg: #ffffff;
-  --sdk-scrollbar-popover-item-hover: #f1f1f1;
+  --sdk-scrollbar-popover-bg: var(--sdk-color-surface);
+  --sdk-scrollbar-popover-item-hover: var(--sdk-secondary-color);
   --sdk-scrollbar-popover-title-color: var(--sdk-color-text-base);
   --sdk-scrollbar-popover-subtitle-color: var(--sdk-color-text-muted);
 
-  --sdk-scrollbar-width: 60px;
-  --sdk-scrollbar-track-width: 36px;
+  --sdk-scrollbar-width: 48px;
+  --sdk-scrollbar-track-width: 28px;
   --sdk-scrollbar-track-height: 90%;
-  --sdk-scrollbar-btn-height: 32px;
+  --sdk-scrollbar-btn-height: 28px;
   --sdk-scrollbar-btn-hover-bg: rgba(0, 0, 0, 0.05);
   --sdk-scrollbar-btn-active-bg: rgba(0, 0, 0, 0.1);
-  --sdk-scrollbar-btn-icon-size: 20px;
-  --sdk-scrollbar-thumb-border-radius: 5px;
+  --sdk-scrollbar-btn-icon-size: 16px;
+  --sdk-scrollbar-thumb-border-radius: 9999px;
   --sdk-scrollbar-thumb-min-height: 30px;
-  --sdk-scrollbar-indicator-width: 18px;
-  --sdk-scrollbar-indicator-height: 5px;
-  --sdk-scrollbar-indicator-border-radius: 2.5px;
-  --sdk-scrollbar-indicator-offset: -2.5px;
+  --sdk-scrollbar-indicator-width: 16px;
+  --sdk-scrollbar-indicator-height: 4px;
+  --sdk-scrollbar-indicator-border-radius: 2px;
+  --sdk-scrollbar-indicator-offset: -2px;
   --sdk-scrollbar-search-indicator-height: 4px;
 
   /* ============================================
      COMMENTS
      ============================================ */
 
-  --sdk-comment-card-bg: var(--sdk-background-viewport);
+  --sdk-comment-card-bg: var(--sdk-color-surface);
   --sdk-comment-card-border: var(--sdk-border-color);
-  --sdk-comment-floating-border: var(--sdk-background-primary);
-  --sdk-comment-avatar-bg: #333333;
-  --sdk-comment-avatar-color: var(--sdk-color-white);
-  --sdk-comment-author-color: #1a1a1a;
-  --sdk-comment-timestamp-color: #999999;
-  --sdk-comment-content-color: #333333;
-  --sdk-comment-badge-bg: #666666;
-  --sdk-comment-badge-color: var(--sdk-color-white);
-  --sdk-comment-highlight-bg: #fff9e6;
-  --sdk-comment-highlight-border: #ffa500;
+  --sdk-comment-floating-border: var(--sdk-border-color);
+  --sdk-comment-avatar-bg: var(--sdk-secondary-color);
+  --sdk-comment-avatar-color: var(--sdk-color-text-base);
+  --sdk-comment-author-color: var(--sdk-color-text-base);
+  --sdk-comment-timestamp-color: var(--sdk-text-muted);
+  --sdk-comment-content-color: #404040;
+  --sdk-comment-badge-bg: var(--sdk-secondary-color);
+  --sdk-comment-badge-color: var(--sdk-color-text-base);
+  --sdk-comment-highlight-bg: rgba(245, 158, 11, 0.08);
+  --sdk-comment-highlight-border: var(--sdk-primary-color);
 
   /* ============================================
      SHADOWS
      ============================================ */
 
-  --sdk-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --sdk-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --sdk-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
-  --sdk-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15);
-  --sdk-shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.2);
+  --sdk-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --sdk-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --sdk-shadow-md: 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --sdk-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --sdk-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
 
   /* ============================================
      SPACING
      ============================================ */
 
   --sdk-spacing-xs: 4px;
-  --sdk-spacing-sm: 8px;
-  --sdk-spacing-md: 12px;
-  --sdk-spacing-lg: 16px;
-  --sdk-spacing-xl: 24px;
-  --sdk-spacing-2xl: 32px;
-  --sdk-spacing-3xl: 48px;
+  --sdk-spacing-sm: 6px;
+  --sdk-spacing-md: 8px;
+  --sdk-spacing-lg: 12px;
+  --sdk-spacing-xl: 16px;
+  --sdk-spacing-2xl: 24px;
+  --sdk-spacing-3xl: 32px;
 
-  --sdk-toolbar-padding-x: 12px;         
-  --sdk-toolbar-padding-y: 5px;          
-  --sdk-toolbar-gap: 8px;                
-  --sdk-toolbar-margin: 10px 15px;       
-  --sdk-toolbar-border-radius: 10px;
-  --sdk-toolbar-min-height: 44px;        
+  --sdk-toolbar-padding-x: 4px;
+  --sdk-toolbar-padding-y: 4px;
+  --sdk-toolbar-gap: 4px;
+  --sdk-toolbar-margin: 8px 12px;
+  --sdk-toolbar-border-radius: 8px;
+  --sdk-toolbar-min-height: 36px;
 
-  --sdk-sidebar-padding: 12px 8px;
-  --sdk-sidebar-margin: 16px 10px 30px 16px;
-  --sdk-sidebar-width: 140px;
+  --sdk-sidebar-padding: 8px 6px;
+  --sdk-sidebar-margin: 0 8px 12px 12px;
+  --sdk-sidebar-width: 128px;
   --sdk-sidebar-border-radius: 8px;
-  --sdk-thumbnail-gap: 12px;
+  --sdk-thumbnail-gap: 8px;
 
-  --sdk-button-padding-x: 12px;
-  --sdk-button-padding-y: 6px;
-  --sdk-button-padding-sm-x: 8px;
-  --sdk-button-padding-sm-y: 4px;
-  --sdk-button-padding-lg-x: 16px;
-  --sdk-button-padding-lg-y: 10px;
+  --sdk-button-padding-x: 8px;
+  --sdk-button-padding-y: 4px;
+  --sdk-button-padding-sm-x: 6px;
+  --sdk-button-padding-sm-y: 2px;
+  --sdk-button-padding-lg-x: 12px;
+  --sdk-button-padding-lg-y: 6px;
 
-  --sdk-input-padding-x: 8px;
-  --sdk-input-padding-y: 4px;
+  --sdk-input-padding-x: 6px;
+  --sdk-input-padding-y: 2px;
 
   /* ============================================
-     TYPOGRAPHY
+     TYPOGRAPHY (AGY Font Stack & Scale)
      ============================================ */
 
-  --sdk-font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell,
-    "Helvetica Neue", sans-serif;
-  --sdk-font-family-mono:
-    "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+  --sdk-font-family: var(
+    --font-sans,
+    var(
+      --vscode-font-family,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      "Helvetica Neue",
+      Arial,
+      sans-serif
+    )
+  );
+  --sdk-font-family-mono: var(
+    --font-mono,
+    var(
+      --editor-font-family,
+      ui-monospace,
+      SFMono-Regular,
+      Menlo,
+      Monaco,
+      Consolas,
+      "Liberation Mono",
+      "Courier New",
+      monospace
+    )
+  );
 
   --sdk-font-size-xs: 11px;
   --sdk-font-size-sm: 12px;
-  --sdk-font-size-md: 14px;
-  --sdk-font-size-lg: 16px;
-  --sdk-font-size-xl: 18px;
-  --sdk-font-size-2xl: 20px;
+  --sdk-font-size-md: 13px;
+  --sdk-font-size-lg: 14px;
+  --sdk-font-size-xl: 16px;
+  --sdk-font-size-2xl: 18px;
 
   --sdk-font-weight-normal: 400;
   --sdk-font-weight-medium: 500;
@@ -869,22 +897,23 @@
      ============================================ */
 
   --sdk-border-width: 1px;
-  --sdk-border-width-thick: 2px;
+  --sdk-border-width-thick: 1.5px;
 
   --sdk-border-radius-none: 0;
+  --sdk-border-radius-xs: 3px;
   --sdk-border-radius-sm: 4px;
   --sdk-border-radius-md: 6px;
   --sdk-border-radius-lg: 8px;
-  --sdk-border-radius-xl: 12px;
+  --sdk-border-radius-xl: 10px;
   --sdk-border-radius-full: 9999px;
 
   /* ============================================
      LAYOUT & SIZING
      ============================================ */
 
-  --sdk-toolbar-height: 44px;            
-  --sdk-thumbnail-width: 84px;
-  --sdk-thumbnail-height: 120px;
+  --sdk-toolbar-height: 36px;
+  --sdk-thumbnail-width: 80px;
+  --sdk-thumbnail-height: 112px;
 
   --sdk-z-index-base: 1;
   --sdk-z-index-dropdown: 1000;
@@ -899,26 +928,26 @@
      TRANSITIONS
      ============================================ */
 
-  --sdk-transition-fast: 100ms ease;
-  --sdk-transition-normal: 200ms ease;
-  --sdk-transition-slow: 300ms ease;
+  --sdk-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --sdk-transition-normal: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --sdk-transition-slow: 250ms cubic-bezier(0.4, 0, 0.2, 1);
 
-  --sdk-toolbar-icon-size: 16px;        
+  --sdk-toolbar-icon-size: 16px;
   --sdk-toolbar-border-width: 1px;
 
   --sdk-action-button-border-width: 1px;
-  --sdk-action-button-border-radius: 6px; 
+  --sdk-action-button-border-radius: 6px;
 
   --sdk-scrollbar-border-color: transparent;
   --sdk-scrollbar-border-width: 0px;
-  --sdk-scrollbar-border-radius: 5px;
+  --sdk-scrollbar-border-radius: 9999px;
 
   --sdk-comment-font-size: var(--sdk-font-size-sm);
   --sdk-comment-font-family: var(--sdk-font-family);
-  --sdk-comment-border-width: 4px;
-  --sdk-comment-border-radius: var(--sdk-border-radius-xl);
+  --sdk-comment-border-width: 1px;
+  --sdk-comment-border-radius: var(--sdk-border-radius-lg);
 
-  --sdk-sidebar-border-width: 2px;
+  --sdk-sidebar-border-width: 1px;
 
   /* ============================================
      COORDINATOR TOKENS
@@ -927,7 +956,7 @@
   --sdk-coordinator-breakpoint-hide-panels: 800;
   --sdk-coordinator-breakpoint-hide-comments: 600;
   --sdk-coordinator-viewport-min-width: 420;
-  --sdk-coordinator-scrollbar-width: 60;
+  --sdk-coordinator-scrollbar-width: 48;
 
   /* ============================================
      RESPONSIVE TOKENS VIA CONTAINER QUERIES
@@ -938,11 +967,11 @@
     .pdf-sidebar,
     .pdf-viewport,
     .document-comments-floating {
-      --sdk-toolbar-padding-x: 8px;       
-      --sdk-toolbar-gap: 6px;              
-      --sdk-toolbar-margin: 8px 15px;      
+      --sdk-toolbar-padding-x: 4px;
+      --sdk-toolbar-gap: 4px;
+      --sdk-toolbar-margin: 8px 12px;
       --sdk-sidebar-width: 110px;
-      --sdk-thumbnail-gap: 10px;
+      --sdk-thumbnail-gap: 8px;
       --sdk-scrollbar-width: 48px;
       --sdk-scrollbar-track-width: 28px;
       --sdk-coordinator-scrollbar-width: 48;
@@ -954,15 +983,15 @@
     .pdf-sidebar,
     .pdf-viewport,
     .document-comments-floating {
-      --sdk-toolbar-padding-x: 10px;       
-      --sdk-toolbar-gap: 7px;             
-      --sdk-toolbar-margin: 10px 15px;     
+      --sdk-toolbar-padding-x: 4px;
+      --sdk-toolbar-gap: 4px;
+      --sdk-toolbar-margin: 8px 12px;
       --sdk-sidebar-width: 120px;
-      --sdk-sidebar-margin: 0px 10px 20px 12px;
-      --sdk-thumbnail-gap: 11px;
-      --sdk-scrollbar-width: 52px;
-      --sdk-scrollbar-track-width: 30px;
-      --sdk-coordinator-scrollbar-width: 52;
+      --sdk-sidebar-margin: 0px 8px 12px 12px;
+      --sdk-thumbnail-gap: 8px;
+      --sdk-scrollbar-width: 48px;
+      --sdk-scrollbar-track-width: 28px;
+      --sdk-coordinator-scrollbar-width: 48;
     }
   }
 
@@ -971,15 +1000,15 @@
     .pdf-sidebar,
     .pdf-viewport,
     .document-comments-floating {
-      --sdk-toolbar-padding-x: 11px;       
-      --sdk-toolbar-gap: 8px;              
-      --sdk-toolbar-margin: 10px 15px;     
-      --sdk-sidebar-width: 130px;
-      --sdk-sidebar-margin: 0px 10px 20px 14px;
-      --sdk-thumbnail-gap: 12px;
-      --sdk-scrollbar-width: 56px;
-      --sdk-scrollbar-track-width: 32px;
-      --sdk-coordinator-scrollbar-width: 56;
+      --sdk-toolbar-padding-x: 4px;
+      --sdk-toolbar-gap: 6px;
+      --sdk-toolbar-margin: 8px 12px;
+      --sdk-sidebar-width: 128px;
+      --sdk-sidebar-margin: 0px 8px 12px 12px;
+      --sdk-thumbnail-gap: 10px;
+      --sdk-scrollbar-width: 52px;
+      --sdk-scrollbar-track-width: 30px;
+      --sdk-coordinator-scrollbar-width: 52;
     }
   }
 
@@ -988,18 +1017,18 @@
     .pdf-sidebar,
     .pdf-viewport,
     .document-comments-floating {
-      --sdk-toolbar-padding-x: 12px;       
-      --sdk-toolbar-gap: 8px;              
-      --sdk-toolbar-margin: 10px 15px;     
-      --sdk-sidebar-width: 140px;
-      --sdk-sidebar-margin: 0px 10px 20px 16px;
-      --sdk-sidebar-padding: 12px 8px;
-      --sdk-thumbnail-gap: 12px;
-      --sdk-scrollbar-width: 60px;
-      --sdk-scrollbar-track-width: 36px;
-      --sdk-scrollbar-btn-height: 32px;
-      --sdk-scrollbar-btn-icon-size: 20px;
-      --sdk-coordinator-scrollbar-width: 60;
+      --sdk-toolbar-padding-x: 4px;
+      --sdk-toolbar-gap: 6px;
+      --sdk-toolbar-margin: 8px 12px;
+      --sdk-sidebar-width: 136px;
+      --sdk-sidebar-margin: 0px 8px 12px 12px;
+      --sdk-sidebar-padding: 8px 6px;
+      --sdk-thumbnail-gap: 10px;
+      --sdk-scrollbar-width: 56px;
+      --sdk-scrollbar-track-width: 32px;
+      --sdk-scrollbar-btn-height: 28px;
+      --sdk-scrollbar-btn-icon-size: 16px;
+      --sdk-coordinator-scrollbar-width: 56;
     }
   }
 
@@ -1008,15 +1037,15 @@
     .pdf-sidebar,
     .pdf-viewport,
     .document-comments-floating {
-      --sdk-toolbar-padding-x: 14px;       
-      --sdk-toolbar-gap: 10px;             
-      --sdk-toolbar-margin: 10px 15px;     
-      --sdk-sidebar-width: 160px;
-      --sdk-sidebar-margin: 0px 10px 20px 16px;
-      --sdk-thumbnail-gap: 14px;
-      --sdk-scrollbar-width: 64px;
-      --sdk-scrollbar-track-width: 38px;
-      --sdk-coordinator-scrollbar-width: 64;
+      --sdk-toolbar-padding-x: 4px;
+      --sdk-toolbar-gap: 6px;
+      --sdk-toolbar-margin: 8px 12px;
+      --sdk-sidebar-width: 148px;
+      --sdk-sidebar-margin: 0px 8px 12px 12px;
+      --sdk-thumbnail-gap: 12px;
+      --sdk-scrollbar-width: 60px;
+      --sdk-scrollbar-track-width: 34px;
+      --sdk-coordinator-scrollbar-width: 60;
     }
   }
 }
@@ -1028,139 +1057,165 @@
  */
 
 :scope[data-theme="dark"] {
-  /* ── Base Palette Overrides ──────────────────
+  /* ── Base Palette Overrides (AGY Dark Mode) ──
      Override base palette variables so ALL
      components referencing them update together.
      ─────────────────────────────────────────── */
 
   --sdk-color-white: #ffffff;
   --sdk-color-black: #000000;
-  --sdk-color-surface: #252525;
-  --sdk-color-surface-alt: #2d2d2d;
-  --sdk-color-canvas: #181818;
-  --sdk-color-border-base: #3a3a3a;
-  --sdk-color-border-light: #353535;
-  --sdk-color-border-dark: #4a4a4a;
-  --sdk-color-border-hover: #666666;
-  --sdk-color-text-base: #e0e0e0;
-  --sdk-color-text-muted: #b0b0b0;
+  --sdk-color-surface: #191919;
+  --sdk-color-surface-alt: #151515;
+  --sdk-color-canvas: #101010;
+  --sdk-color-border-base: rgba(255, 255, 255, 0.08);
+  --sdk-color-border-light: rgba(255, 255, 255, 0.05);
+  --sdk-color-border-dark: rgba(255, 255, 255, 0.14);
+  --sdk-color-border-hover: rgba(255, 255, 255, 0.22);
+  --sdk-color-text-base: #cccccc;
+  --sdk-color-text-muted: #858585;
+  --sdk-color-error: #f87171;
 
   /* ── Primary & Secondary ─────────────────── */
 
-  --sdk-primary-color: #4d9fff;
-  --sdk-primary-hover: #66adff;
-  --sdk-primary-active: #3385ff;
-  --sdk-primary-light: #1a3a5c;
+  --sdk-primary: #007acc;
+  --sdk-primary-color: #007acc;
+  --sdk-primary-hover: #1a8ad4;
+  --sdk-primary-active: #0062a3;
+  --sdk-primary-light: rgba(0, 122, 204, 0.18);
 
-  --sdk-secondary-color: #8e9aaf;
-  --sdk-secondary-hover: #a5b1c6;
-  --sdk-secondary-active: #7a8599;
+  --sdk-secondary-color: #272727;
+  --sdk-secondary-hover: #303030;
+  --sdk-secondary-active: #383838;
+
+  /* ── Backgrounds ─────────────────────────── */
+
+  --sdk-background-base: #151515;
+  --sdk-background-primary: #191919;
+  --sdk-background-secondary: #151515;
+  --sdk-background-tertiary: #272727;
+  --sdk-background-viewport: #101010;
 
   /* ── Text ────────────────────────────────── */
 
-  --sdk-text-muted: #808080;
-  --sdk-text-disabled: #555555;
-  --sdk-text-error: #ff6b6b;
-  --sdk-text-success: #51cf66;
-  --sdk-text-warning: #ffa94d;
-  --sdk-text-info: #4dabf7;
+  --sdk-text-muted: #666666;
+  --sdk-text-disabled: #4d4d4d;
+  --sdk-text-error: #f87171;
+  --sdk-text-success: #4ade80;
+  --sdk-text-warning: #fbbf24;
+  --sdk-text-info: #38bdf8;
+  --sdk-text-select: rgba(0, 122, 204, 0.32);
 
   /* ── Toolbar ─────────────────────────────── */
 
-  --sdk-toolbar-bg: #1e1e1e;
+  --sdk-toolbar-bg: #191919;
   --sdk-toolbar-border: var(--sdk-color-border-base);
-  --sdk-toolbar-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --sdk-toolbar-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 
   /* ── Sidebar ─────────────────────────────── */
 
-  --sdk-sidebar-bg: #1e1e1e;
-  --sdk-sidebar-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --sdk-sidebar-bg: #191919;
+  --sdk-sidebar-border: var(--sdk-color-border-base);
+  --sdk-sidebar-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 
   /* ── Base Buttons ────────────────────────── */
 
-  --sdk-button-bg: #353535;
-  --sdk-button-hover-bg: #404040;
+  --sdk-button-bg: transparent;
+  --sdk-button-border: transparent;
+  --sdk-button-text: var(--sdk-color-text-base);
+  --sdk-button-hover-bg: #272727;
 
   /* ── Nav / Zoom Buttons ──────────────────── */
 
-  --sdk-nav-button-bg: #2a2a2a;
+  --sdk-nav-button-bg: transparent;
+  --sdk-nav-button-border: transparent;
   --sdk-nav-button-color: var(--sdk-color-text-muted);
-  --sdk-nav-button-hover-bg: #333333;
+  --sdk-nav-button-hover-bg: #272727;
   --sdk-nav-button-hover-color: var(--sdk-color-text-base);
-  --sdk-nav-button-active-bg: #3a3a3a;
-  --sdk-nav-input-bg: #1e1e1e;
+  --sdk-nav-button-active-bg: #303030;
+  --sdk-nav-input-bg: #141414;
+  --sdk-nav-input-color: var(--sdk-color-text-base);
 
-  /* ── Action Buttons ──────────────────────── */
+  /* ── Action Buttons (AGY Ghost/Secondary) ── */
 
-  --sdk-action-button-bg: #262b35;
-  --sdk-action-button-border: #404554;
+  --sdk-action-button-bg: transparent;
+  --sdk-action-button-border: transparent;
   --sdk-action-button-color: var(--sdk-color-text-muted);
-  --sdk-action-button-hover-border: var(--sdk-color-border-dark);
-  --sdk-action-button-active-bg: #0a7c5a;
-  --sdk-action-button-active-border: #0a7c5a;
+  --sdk-action-button-hover-bg: #272727;
+  --sdk-action-button-hover-color: var(--sdk-color-text-base);
+  --sdk-action-button-hover-border: transparent;
+  --sdk-action-button-active-bg: #272727;
+  --sdk-action-button-active-border: transparent;
+  --sdk-action-button-active-color: var(--sdk-color-text-base);
 
   /* ── Search ──────────────────────────────── */
 
-  --sdk-search-bg: #1e1e1e;
+  --sdk-search-bg: #141414;
+  --sdk-search-border: var(--sdk-color-border-base);
   --sdk-search-color: var(--sdk-color-text-base);
-  --sdk-search-placeholder: #6b7280;
-  --sdk-search-focus-bg: #2a2a2a;
-  --sdk-search-focus-border: var(--sdk-color-border-dark);
-  --sdk-search-focus-ring: rgba(59, 130, 246, 0.2);
-  --sdk-search-icon-color: #6b7280;
+  --sdk-search-placeholder: #666666;
+  --sdk-search-focus-bg: #141414;
+  --sdk-search-focus-border: rgba(0, 122, 204, 0.6);
+  --sdk-search-focus-ring: rgba(0, 122, 204, 0.2);
+  --sdk-search-icon-color: #666666;
 
   /* ── Inputs ──────────────────────────────── */
 
-  --sdk-input-bg: #2d2d2d;
-  --sdk-input-text: var(--sdk-color-white);
-  --sdk-input-placeholder: #808080;
+  --sdk-input-bg: #141414;
+  --sdk-input-border: var(--sdk-color-border-base);
+  --sdk-input-text: var(--sdk-color-text-base);
+  --sdk-input-placeholder: #666666;
 
   /* ── Thumbnails ──────────────────────────── */
 
-  --sdk-thumbnail-bg: #545454;
+  --sdk-thumbnail-bg: rgba(255, 255, 255, 0.03);
   --sdk-thumbnail-border: transparent;
-  --sdk-thumbnail-border-hover: #1976d2;
-  --sdk-thumbnail-border-active: #1976d2;
-  --sdk-thumbnail-bg-active: #1e3a5f;
-  --sdk-thumbnail-image-bg: #3a3a3a;
+  --sdk-thumbnail-border-hover: rgba(0, 122, 204, 0.7);
+  --sdk-thumbnail-border-active: var(--sdk-primary-color);
+  --sdk-thumbnail-bg-active: rgba(0, 122, 204, 0.14);
+  --sdk-thumbnail-image-bg: #222222;
   --sdk-thumbnail-number-color: var(--sdk-color-text-muted);
-  --sdk-thumbnail-number-active-color: #64b5f6;
-  --sdk-thumbnail-shadow-hover: 0 2px 8px rgba(25, 118, 210, 0.4);
-  --sdk-thumbnail-shadow-active: 0 2px 8px rgba(25, 118, 210, 0.5);
+  --sdk-thumbnail-number-active-color: #38bdf8;
+  --sdk-thumbnail-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --sdk-thumbnail-shadow-active: 0 2px 8px rgba(0, 122, 204, 0.35);
 
   /* ── Scrollbar ───────────────────────────── */
 
-  --sdk-scrollbar-thumb-bg: #4a4a4a;
-  --sdk-scrollbar-thumb-hover: #5a5a5a;
-  --sdk-scrollbar-thumb-active: #6a6a6a;
-  --sdk-scrollbar-button-bg: #1e1e1e;
+  --sdk-scrollbar-bg: var(--sdk-background-viewport);
+  --sdk-scrollbar-track-bg: rgba(255, 255, 255, 0.04);
+  --sdk-scrollbar-thumb-bg: rgba(255, 255, 255, 0.2);
+  --sdk-scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
+  --sdk-scrollbar-thumb-active: rgba(255, 255, 255, 0.48);
+  --sdk-scrollbar-button-bg: transparent;
   --sdk-scrollbar-button-color: var(--sdk-color-text-muted);
-  --sdk-scrollbar-popover-bg: #4a4a4a;
-  --sdk-scrollbar-popover-item-hover: #5a5a5a;
+  --sdk-scrollbar-popover-bg: #191919;
+  --sdk-scrollbar-popover-item-hover: #272727;
 
   /* ── Comments ────────────────────────────── */
 
-  --sdk-comment-card-bg: #2a2a2a;
+  --sdk-comment-card-bg: #191919;
+  --sdk-comment-card-border: var(--sdk-color-border-base);
   --sdk-comment-floating-border: var(--sdk-color-border-base);
-  --sdk-comment-avatar-bg: #4a4a4a;
+  --sdk-comment-avatar-bg: #272727;
+  --sdk-comment-avatar-color: var(--sdk-color-text-base);
   --sdk-comment-author-color: var(--sdk-color-text-base);
-  --sdk-comment-timestamp-color: #888888;
-  --sdk-comment-content-color: #d0d0d0;
-  --sdk-comment-badge-bg: #4a4a4a;
-  --sdk-comment-highlight-bg: #3a2f1a;
+  --sdk-comment-timestamp-color: #666666;
+  --sdk-comment-content-color: #a3a3a3;
+  --sdk-comment-badge-bg: #272727;
+  --sdk-comment-highlight-bg: rgba(245, 158, 11, 0.12);
+  --sdk-comment-highlight-border: var(--sdk-primary-color);
 
   /* ── Shadows ─────────────────────────────── */
 
   --sdk-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
   --sdk-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --sdk-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.5);
-  --sdk-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.6);
-  --sdk-shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --sdk-shadow-md: 0 4px 10px rgba(0, 0, 0, 0.45);
+  --sdk-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.55);
+  --sdk-shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.65);
 
   /* ── Scrollbar buttons dark hover/active ─── */
 
-  --sdk-scrollbar-btn-hover-bg: rgba(255, 255, 255, 0.05);
-  --sdk-scrollbar-btn-active-bg: rgba(255, 255, 255, 0.1);
+  --sdk-scrollbar-btn-hover-bg: rgba(255, 255, 255, 0.06);
+  --sdk-scrollbar-btn-active-bg: rgba(255, 255, 255, 0.12);
 }
 /* src/styles/themes/default.css */
 
@@ -1401,10 +1456,10 @@ canvas.hiddenCanvasElement {
   min-height: var(--sdk-toolbar-min-height);
   box-shadow: var(--sdk-toolbar-shadow);
   /*
-   * width: 100% + box-sizing: border-box ensures the toolbar never
-   * exceeds its parent width regardless of padding.
+   * width: calc(100% - 24px) + box-sizing: border-box ensures the toolbar
+   * sits symmetrically with 12px horizontal margins inside its parent.
    */
-  width: calc(100% - 20px);
+  width: calc(100% - 24px);
   box-sizing: border-box;
   /*
    * overflow: visible allows wrapped rows to expand downward.
@@ -1429,7 +1484,7 @@ canvas.hiddenCanvasElement {
  * remove toolbar border radius so it sits flush with the overlaid panel.
  */
 .pdf-viewer-container--overlay-mode .pdf-toolbar {
-  border-radius: 0;
+  border-radius: var(--sdk-toolbar-border-radius);
 }
 
 /* ── Toolbar Spacer ──────────────────────────────── */
@@ -1460,7 +1515,7 @@ canvas.hiddenCanvasElement {
 .toolbar-navigation {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 2px;
 }
 
 .toolbar-section-spacer {
@@ -1472,10 +1527,14 @@ canvas.hiddenCanvasElement {
 .nav-button {
   padding: 0;
   border: var(--sdk-nav-button-border-width) solid var(--sdk-nav-button-border);
+  border-radius: var(--sdk-nav-button-border-radius);
   background: var(--sdk-nav-button-bg);
   color: var(--sdk-nav-button-color);
   cursor: pointer;
-  transition: all var(--sdk-transition-fast);
+  transition:
+    background-color var(--sdk-transition-fast),
+    color var(--sdk-transition-fast),
+    border-color var(--sdk-transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1487,16 +1546,10 @@ canvas.hiddenCanvasElement {
 
 .nav-button-prev {
   border-radius: var(--sdk-nav-button-border-radius);
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  border-right: none;
 }
 
 .nav-button-next {
   border-radius: var(--sdk-nav-button-border-radius);
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  border-left: none;
 }
 
 .nav-button:hover:not(:disabled) {
@@ -1525,30 +1578,36 @@ canvas.hiddenCanvasElement {
   display: flex;
   align-items: center;
   width: var(--sdk-toolbar-page-input-width);
-  height: var(--sdk-toolbar-btn-size);
+  height: 24px;
   background: var(--sdk-nav-input-bg);
-  border-top: var(--sdk-border-width) solid var(--sdk-nav-button-border);
-  border-bottom: var(--sdk-border-width) solid var(--sdk-nav-button-border);
-  border-left: none;
-  border-right: none;
+  border: var(--sdk-border-width) solid var(--sdk-border-color);
+  border-radius: var(--sdk-border-radius-sm);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .page-input-field {
   width: 100%;
   height: 100%;
-  padding: 0;
+  padding: 0 2px;
   border: none;
   background: transparent;
   color: var(--sdk-nav-input-color);
-  font-size: var(--sdk-font-size-lg);
+  font-size: var(--sdk-font-size-sm);
   font-family: var(--sdk-font-family);
   text-align: center;
-  font-weight: var(--sdk-font-weight-normal);
+  font-weight: var(--sdk-font-weight-medium);
+  font-variant-numeric: tabular-nums;
   outline: none;
 }
 
 .page-input-field:focus {
   background: var(--sdk-search-focus-bg);
+}
+
+.page-input-wrapper:focus-within {
+  border-color: var(--sdk-search-focus-border);
+  box-shadow: 0 0 0 1px var(--sdk-search-focus-ring);
 }
 
 .page-input-field::-webkit-outer-spin-button,
@@ -1566,16 +1625,20 @@ canvas.hiddenCanvasElement {
 .zoom-controls-group {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 2px;
 }
 
 .zoom-button {
   padding: 0;
   border: var(--sdk-border-width) solid var(--sdk-nav-button-border);
+  border-radius: var(--sdk-border-radius-md);
   background: var(--sdk-nav-button-bg);
   color: var(--sdk-nav-button-color);
   cursor: pointer;
-  transition: all var(--sdk-transition-fast);
+  transition:
+    background-color var(--sdk-transition-fast),
+    color var(--sdk-transition-fast),
+    border-color var(--sdk-transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1587,21 +1650,14 @@ canvas.hiddenCanvasElement {
 
 .zoom-button-fit {
   border-radius: var(--sdk-border-radius-md);
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  border-right: none;
 }
 
 .zoom-button-out {
-  border-radius: 0;
-  border-right: none;
+  border-radius: var(--sdk-border-radius-md);
 }
 
 .zoom-button-in {
   border-radius: var(--sdk-border-radius-md);
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  border-left: none;
 }
 
 .zoom-button:hover:not(:disabled) {
@@ -1630,30 +1686,36 @@ canvas.hiddenCanvasElement {
   display: flex;
   align-items: center;
   width: var(--sdk-toolbar-zoom-input-width);
-  height: var(--sdk-toolbar-btn-size);
+  height: 24px;
   background: var(--sdk-nav-input-bg);
-  border-top: var(--sdk-border-width) solid var(--sdk-nav-button-border);
-  border-bottom: var(--sdk-border-width) solid var(--sdk-nav-button-border);
-  border-left: none;
-  border-right: none;
+  border: var(--sdk-border-width) solid var(--sdk-border-color);
+  border-radius: var(--sdk-border-radius-sm);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .zoom-input-field {
   width: 100%;
   height: 100%;
-  padding: 0 var(--sdk-spacing-md);
+  padding: 0 4px;
   border: none;
   background: transparent;
   color: var(--sdk-nav-input-color);
-  font-size: var(--sdk-font-size-lg);
+  font-size: var(--sdk-font-size-sm);
   font-family: var(--sdk-font-family);
   text-align: center;
-  font-weight: var(--sdk-font-weight-normal);
+  font-weight: var(--sdk-font-weight-medium);
+  font-variant-numeric: tabular-nums;
   outline: none;
 }
 
 .zoom-input-field:focus {
   background: var(--sdk-search-focus-bg);
+}
+
+.zoom-input-wrapper:focus-within {
+  border-color: var(--sdk-search-focus-border);
+  box-shadow: 0 0 0 1px var(--sdk-search-focus-ring);
 }
 
 /* ── Search Controls ─────────────────────────────── */
@@ -1665,22 +1727,26 @@ canvas.hiddenCanvasElement {
 }
 
 .search-controls > button {
-  padding: var(--sdk-spacing-sm);
+  padding: 0;
   border: none;
   background: transparent;
   color: var(--sdk-text-secondary);
   border-radius: var(--sdk-border-radius-md);
   cursor: pointer;
-  transition: all var(--sdk-transition-fast);
+  transition:
+    background-color var(--sdk-transition-fast),
+    color var(--sdk-transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
+  width: var(--sdk-toolbar-search-btn-size);
+  height: var(--sdk-toolbar-search-btn-size);
   min-width: var(--sdk-toolbar-search-btn-size);
   min-height: var(--sdk-toolbar-search-btn-size);
 }
 
 .search-controls > button:hover {
-  background: var(--sdk-search-bg);
+  background: var(--sdk-action-button-hover-bg, var(--sdk-secondary-color));
   color: var(--sdk-text-primary);
 }
 
@@ -1693,19 +1759,24 @@ canvas.hiddenCanvasElement {
 .search-box {
   display: flex;
   align-items: center;
-  gap: var(--sdk-spacing-sm);
+  gap: var(--sdk-spacing-xs);
   background: var(--sdk-search-bg);
-  padding: var(--sdk-spacing-sm) var(--sdk-spacing-md);
+  height: var(--sdk-toolbar-btn-size);
+  padding: 0 var(--sdk-spacing-md);
   border-radius: var(--sdk-border-radius-md);
   border: var(--sdk-border-width) solid var(--sdk-search-border);
   min-width: var(--sdk-toolbar-search-min-width);
-  transition: all var(--sdk-transition-fast);
+  box-sizing: border-box;
+  transition:
+    background-color var(--sdk-transition-fast),
+    border-color var(--sdk-transition-fast),
+    box-shadow var(--sdk-transition-fast);
 }
 
 .search-box:focus-within {
   background: var(--sdk-search-focus-bg);
   border-color: var(--sdk-search-focus-border);
-  box-shadow: 0 0 0 3px var(--sdk-search-focus-ring);
+  box-shadow: 0 0 0 1px var(--sdk-search-focus-ring);
 }
 
 .search-box .search-icon {
@@ -1717,6 +1788,7 @@ canvas.hiddenCanvasElement {
 
 .search-box input {
   flex: 1;
+  min-width: 0;
   border: none;
   background: transparent;
   color: var(--sdk-search-color);
@@ -1731,7 +1803,9 @@ canvas.hiddenCanvasElement {
 }
 
 .search-box .clear-search {
-  padding: var(--sdk-toolbar-search-nav-padding);
+  width: 20px;
+  height: 20px;
+  padding: 0;
   border: none;
   background: transparent;
   color: var(--sdk-search-placeholder);
@@ -1740,12 +1814,14 @@ canvas.hiddenCanvasElement {
   align-items: center;
   justify-content: center;
   border-radius: var(--sdk-border-radius-sm);
-  transition: all var(--sdk-transition-fast);
+  transition:
+    background-color var(--sdk-transition-fast),
+    color var(--sdk-transition-fast);
 }
 
 .search-box .clear-search:hover {
-  background: var(--sdk-search-border);
-  color: var(--sdk-text-secondary);
+  background: var(--sdk-secondary-color);
+  color: var(--sdk-text-primary);
 }
 
 .search-box .clear-search svg {
@@ -1754,7 +1830,8 @@ canvas.hiddenCanvasElement {
 }
 
 .search-box .search-match-count {
-  font-size: var(--sdk-font-size-sm);
+  font-size: var(--sdk-font-size-xs);
+  font-variant-numeric: tabular-nums;
   color: var(--sdk-text-secondary);
   white-space: nowrap;
   padding: 0 var(--sdk-spacing-xs);
@@ -1762,7 +1839,9 @@ canvas.hiddenCanvasElement {
 }
 
 .search-box .search-nav-btn {
-  padding: var(--sdk-toolbar-search-nav-padding);
+  width: 20px;
+  height: 20px;
+  padding: 0;
   border: none;
   background: transparent;
   color: var(--sdk-search-placeholder);
@@ -1771,12 +1850,14 @@ canvas.hiddenCanvasElement {
   align-items: center;
   justify-content: center;
   border-radius: var(--sdk-border-radius-sm);
-  transition: all var(--sdk-transition-fast);
+  transition:
+    background-color var(--sdk-transition-fast),
+    color var(--sdk-transition-fast);
 }
 
 .search-box .search-nav-btn:hover:not(:disabled) {
-  background: var(--sdk-search-border);
-  color: var(--sdk-text-secondary);
+  background: var(--sdk-secondary-color);
+  color: var(--sdk-text-primary);
 }
 
 .search-box .search-nav-btn:disabled {
@@ -1802,19 +1883,23 @@ canvas.hiddenCanvasElement {
   background: var(--sdk-action-button-bg);
   color: var(--sdk-action-button-color);
   cursor: pointer;
-  transition: all var(--sdk-transition-fast);
+  transition:
+    background-color var(--sdk-transition-fast),
+    color var(--sdk-transition-fast),
+    border-color var(--sdk-transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: none;
 }
 
-.action-button:hover {
-  background: var(--sdk-action-button-bg);
+.action-button:hover:not(:disabled) {
+  background: var(--sdk-action-button-hover-bg, var(--sdk-secondary-color));
+  color: var(--sdk-action-button-hover-color, var(--sdk-text-primary));
   border-color: var(--sdk-action-button-hover-border);
 }
 
-.action-button:active {
+.action-button:active:not(:disabled) {
   color: var(--sdk-action-button-active-color);
   background-color: var(--sdk-action-button-active-bg);
   border-color: var(--sdk-action-button-active-border);
@@ -1846,7 +1931,10 @@ canvas.hiddenCanvasElement {
   background: var(--sdk-action-button-bg);
   color: var(--sdk-action-button-color);
   cursor: pointer;
-  transition: all var(--sdk-transition-fast);
+  transition:
+    background-color var(--sdk-transition-fast),
+    color var(--sdk-transition-fast),
+    border-color var(--sdk-transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1855,13 +1943,14 @@ canvas.hiddenCanvasElement {
 
 .fullscreen-button:hover,
 .download-button:hover {
-  background: var(--sdk-action-button-bg);
+  background: var(--sdk-action-button-hover-bg, var(--sdk-secondary-color));
+  color: var(--sdk-action-button-hover-color, var(--sdk-text-primary));
   border-color: var(--sdk-action-button-hover-border);
 }
 
 .fullscreen-button:active,
 .download-button:active {
-  background: var(--sdk-background-secondary);
+  background: var(--sdk-action-button-active-bg);
 }
 
 .fullscreen-button svg,
@@ -1874,27 +1963,31 @@ canvas.hiddenCanvasElement {
 /* ── Other Toolbar Control Buttons ───────────────── */
 
 .toolbar-controls > button:not(.nav-button):not(.action-button) {
-  padding: var(--sdk-spacing-sm);
+  padding: 0;
   border: none;
   background: transparent;
   color: var(--sdk-text-secondary);
   border-radius: var(--sdk-border-radius-md);
   cursor: pointer;
-  transition: all var(--sdk-transition-fast);
+  transition:
+    background-color var(--sdk-transition-fast),
+    color var(--sdk-transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
+  width: var(--sdk-toolbar-search-btn-size);
+  height: var(--sdk-toolbar-search-btn-size);
   min-width: var(--sdk-toolbar-search-btn-size);
   min-height: var(--sdk-toolbar-search-btn-size);
 }
 
 .toolbar-controls > button:not(.nav-button):not(.action-button):hover {
-  background: var(--sdk-search-bg);
+  background: var(--sdk-action-button-hover-bg, var(--sdk-secondary-color));
   color: var(--sdk-text-primary);
 }
 
 .toolbar-controls > button:not(.nav-button):not(.action-button):active {
-  background: var(--sdk-search-border);
+  background: var(--sdk-action-button-active-bg);
   color: var(--sdk-text-primary);
 }
 
@@ -1912,7 +2005,7 @@ canvas.hiddenCanvasElement {
   width: var(--sdk-border-width);
   height: var(--sdk-toolbar-separator-height);
   background: var(--sdk-toolbar-border);
-  margin: 0 var(--sdk-spacing-xs);
+  margin: 0 2px;
 }
 
 /*
@@ -1935,7 +2028,7 @@ canvas.hiddenCanvasElement {
  */
 .action-button:disabled,
 .action-button.disabled {
-  opacity: 0.35;
+  opacity: var(--sdk-button-disabled-opacity);
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -1966,12 +2059,12 @@ canvas.hiddenCanvasElement {
   top: calc(100% + 6px);
   right: 0;
   z-index: 9999;
-  min-width: 200px;
+  min-width: 180px;
   background: var(--sdk-toolbar-bg);
   border: var(--sdk-toolbar-border-width) solid var(--sdk-toolbar-border);
-  border-radius: var(--sdk-border-radius-md);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  padding: 10px;
+  border-radius: var(--sdk-border-radius-lg);
+  box-shadow: var(--sdk-shadow-md);
+  padding: 6px;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -1988,13 +2081,13 @@ canvas.hiddenCanvasElement {
   padding: 0;
   gap: var(--sdk-spacing-sm);
   cursor: pointer;
-  transition: background var(--sdk-transition-fast);
-  border-radius: var(--sdk-border-radius-sm);
+  transition: background-color var(--sdk-transition-fast);
+  border-radius: var(--sdk-border-radius-md);
   flex: 0 0 auto;
 }
 
 .toolbar-overflow-dropdown-item:hover {
-  background: var(--sdk-search-bg);
+  background: transparent;
 }
 
 /* No trailing separators inside the dropdown */
@@ -2023,7 +2116,7 @@ canvas.hiddenCanvasElement {
   margin: var(--sdk-sidebar-margin);
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 10px 5px;
+  padding: var(--sdk-sidebar-padding, 8px 6px);
   background: var(--sdk-sidebar-bg);
   border-radius: var(--sdk-sidebar-border-radius);
   box-shadow: var(--sdk-sidebar-shadow);
@@ -2046,11 +2139,11 @@ canvas.hiddenCanvasElement {
    * Fixed pixel width in overlay — cqi units are relative to the
    * shrunken container width which makes thumbnails tiny in overlay.
    */
-  width: 160px;
-  min-width: 160px;
+  width: 152px;
+  min-width: 152px;
   height: 100%;
   margin: 0;
-  border-radius: 0;
+  border-radius: 0 var(--sdk-sidebar-border-radius) var(--sdk-sidebar-border-radius) 0;
   box-shadow: none;
   border: none;
   border-right: var(--sdk-sidebar-border-width) solid var(--sdk-sidebar-border);
@@ -2060,7 +2153,7 @@ canvas.hiddenCanvasElement {
 /* ── Thumbnail in overlay — fixed width to match sidebar ─── */
 
 .pdf-panel-overlay--left .thumbnail {
-  width: 110px;
+  width: 112px;
 }
 
 /* ── Scrollbar inside sidebar ────────────────────────── */
@@ -2077,7 +2170,7 @@ canvas.hiddenCanvasElement {
 
 .pdf-sidebar::-webkit-scrollbar-thumb {
   background: var(--sdk-border-color-dark);
-  border-radius: var(--sdk-border-radius-sm);
+  border-radius: var(--sdk-border-radius-full);
 }
 
 .pdf-sidebar::-webkit-scrollbar-thumb:hover {
@@ -2089,7 +2182,7 @@ canvas.hiddenCanvasElement {
 .thumbnails {
   display: flex;
   flex-direction: column;
-  gap: clamp(4px, 0.8cqi, 12px);
+  gap: clamp(4px, 0.8cqi, 10px);
   align-items: center;
   flex: 1;
 }
@@ -2110,16 +2203,19 @@ canvas.hiddenCanvasElement {
 /* ── Thumbnail item ──────────────────────────────────── */
 
 .thumbnail {
-  width: clamp(56px, 10cqi, 130px);
+  width: clamp(56px, 10cqi, 124px);
   background: var(--sdk-thumbnail-bg);
-  border: var(--sdk-border-width-thick) solid var(--sdk-thumbnail-border);
+  border: var(--sdk-border-width) solid var(--sdk-thumbnail-border);
   border-radius: var(--sdk-border-radius-md);
-  padding: 9px;
+  padding: 6px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: all var(--sdk-transition-normal);
+  transition:
+    background-color var(--sdk-transition-fast),
+    border-color var(--sdk-transition-fast),
+    box-shadow var(--sdk-transition-fast);
   position: relative;
   flex-shrink: 0;
   box-sizing: border-box;
@@ -2128,11 +2224,6 @@ canvas.hiddenCanvasElement {
 .thumbnail:hover {
   border-color: var(--sdk-thumbnail-border-hover);
   box-shadow: var(--sdk-thumbnail-shadow-hover);
-  transform: translateY(-1px);
-}
-
-.thumbnail:active {
-  transform: translateY(0);
 }
 
 .thumbnail.active {
@@ -2151,7 +2242,7 @@ canvas.hiddenCanvasElement {
   justify-content: center;
   overflow: hidden;
   background: var(--sdk-thumbnail-image-bg);
-  border-radius: var(--sdk-border-radius-sm);
+  border-radius: var(--sdk-border-radius-xs);
   margin-bottom: var(--sdk-spacing-xs);
   position: relative;
 }
@@ -2191,10 +2282,11 @@ canvas.hiddenCanvasElement {
 /* ── Page number label ───────────────────────────────── */
 
 .thumbnail-number {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--sdk-thumbnail-number-color);
-  font-weight: var(--sdk-font-weight-semibold);
+  font-weight: var(--sdk-font-weight-medium);
   font-family: var(--sdk-font-family);
+  font-variant-numeric: tabular-nums;
   text-align: center;
   line-height: 1.2;
   flex-shrink: 0;
@@ -2208,7 +2300,7 @@ canvas.hiddenCanvasElement {
 
 .thumbnail.active .thumbnail-number {
   color: var(--sdk-thumbnail-number-active-color);
-  font-weight: var(--sdk-font-weight-bold);
+  font-weight: var(--sdk-font-weight-semibold);
 }
 /**
  * Viewport / PDF Canvas Area Styles
@@ -2452,15 +2544,15 @@ canvas.hiddenCanvasElement {
 /* ── Scrollbar Container ─────────────────────────── */
 
 .custom-scrollbar {
-  width: 16px;
+  width: 12px;
   height: 100%;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 0;
-  background: var(--sdk-scrollbar-bg, #2b2b2b);
-  border-left: 1px solid var(--sdk-border-color, rgba(255, 255, 255, 0.1));
+  padding: 6px 0;
+  background: var(--sdk-scrollbar-bg, transparent);
+  border-left: 1px solid var(--sdk-border-color, rgba(255, 255, 255, 0.08));
   flex-shrink: 0;
   box-sizing: border-box;
   align-self: stretch;
@@ -2469,13 +2561,13 @@ canvas.hiddenCanvasElement {
 /* ── Scrollbar Track ─────────────────────────────── */
 
 .custom-scrollbar-track {
-  width: 8px;
+  width: 6px;
   height: 100%;
-  background: var(--sdk-scrollbar-track-bg, rgba(0, 0, 0, 0.2));
+  background: var(--sdk-scrollbar-track-bg, transparent);
   position: relative;
   overflow: hidden;
   border: none;
-  border-radius: 4px;
+  border-radius: 9999px;
 }
 
 /* ── Scrollbar Buttons ───────────────────────────── */
@@ -2491,7 +2583,7 @@ canvas.hiddenCanvasElement {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background var(--sdk-transition-normal);
+  transition: background-color var(--sdk-transition-normal);
   z-index: 3;
   color: var(--sdk-scrollbar-button-color);
 }
@@ -2528,7 +2620,7 @@ canvas.hiddenCanvasElement {
   background: var(--sdk-scrollbar-thumb-bg);
   border-radius: var(--sdk-scrollbar-thumb-border-radius);
   cursor: grab;
-  transition: background var(--sdk-transition-normal);
+  transition: background-color var(--sdk-transition-normal);
   z-index: 1;
 }
 
@@ -2540,27 +2632,6 @@ canvas.hiddenCanvasElement {
   cursor: grabbing;
   background: var(--sdk-scrollbar-thumb-active);
 }
-
-/* .custom-scrollbar-indicator {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: var(--sdk-scrollbar-indicator-width);
-  height: var(--sdk-scrollbar-indicator-height);
-  background: var(--sdk-scrollbar-indicator-color);
-  border-radius: var(--sdk-scrollbar-indicator-border-radius);
-  pointer-events: none;
-  z-index: 2;
-  margin-top: -2.5px;
-  border: none;
-  padding: 0;
-  font: inherit;
-  cursor: default;
-}
-
-.custom-scrollbar-indicator:hover {
-  background-color: var(--sdk-scrollbar-indicator-hover-color);
-} */
 
 .custom-scrollbar-indicator {
   position: absolute;
@@ -2589,7 +2660,7 @@ canvas.hiddenCanvasElement {
   position: absolute;
   right: 100%;
   border: 1px solid var(--sdk-border-color);
-  box-shadow: var(--sdk-shadow-lg);
+  box-shadow: var(--sdk-shadow-md);
   z-index: var(--sdk-z-index-popover);
   min-width: var(--sdk-scrollbar-popover-min-width);
   width: var(--sdk-scrollbar-popover-width);
@@ -2613,9 +2684,9 @@ canvas.hiddenCanvasElement {
 
 .scrollbar-markers-popover-item {
   cursor: pointer;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-left-style: solid;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--sdk-transition-fast);
 }
 
 .scrollbar-markers-popover-item:hover {
@@ -2623,7 +2694,7 @@ canvas.hiddenCanvasElement {
 }
 
 .scrollbar-markers-popover-title {
-  font-weight: 600;
+  font-weight: var(--sdk-font-weight-medium);
   font-size: var(--sdk-font-size-sm);
   color: var(--sdk-scrollbar-popover-title-color);
 }
@@ -2656,6 +2727,7 @@ canvas.hiddenCanvasElement {
   overflow: hidden;
   padding: var(--sdk-spacing-xs) 2px;
   background: var(--sdk-background-viewport);
+  border-left: 1px solid var(--sdk-border-color);
   cursor: default;
   align-self: stretch;
   box-sizing: border-box;
@@ -2665,15 +2737,17 @@ canvas.hiddenCanvasElement {
 
 .floating-comment-card {
   position: absolute;
-  left: clamp(4px, 1cqi, 12px);
-  right: clamp(4px, 1cqi, 12px);
-  padding: clamp(8px, 1.5cqi, 16px);
+  left: clamp(6px, 1cqi, 10px);
+  right: clamp(6px, 1cqi, 10px);
+  padding: clamp(8px, 1.2cqi, 12px);
   background: var(--sdk-comment-card-bg);
   border: var(--sdk-comment-border-width) solid var(--sdk-comment-floating-border);
   border-radius: var(--sdk-comment-border-radius);
+  box-shadow: var(--sdk-shadow-xs);
   pointer-events: auto;
   transition:
     top 0.2s ease-out,
+    border-color var(--sdk-transition-normal),
     box-shadow var(--sdk-transition-normal);
   z-index: 1;
   cursor: pointer;
@@ -2681,12 +2755,13 @@ canvas.hiddenCanvasElement {
 }
 
 .floating-comment-card:hover {
+  border-color: var(--sdk-border-color-dark);
   box-shadow: var(--sdk-shadow-sm);
 }
 
 .floating-comment-card.comment-active {
   border-color: var(--sdk-comment-highlight-border);
-  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.25);
+  box-shadow: 0 0 0 1px var(--sdk-comment-highlight-border), var(--sdk-shadow-sm);
   z-index: 10;
 }
 
@@ -2694,17 +2769,14 @@ canvas.hiddenCanvasElement {
 
 .comment-header {
   display: flex;
-  align-items: flex-start;
-  /*
-   * Gap scales with container width.
-   */
-  gap: clamp(4px, 1cqi, 10px);
-  margin-bottom: clamp(4px, 1cqi, 10px);
+  align-items: center;
+  gap: clamp(6px, 1cqi, 8px);
+  margin-bottom: 6px;
 }
 
 @container pdf-viewer (min-width: 1200px) {
   .comment-header {
-    gap: var(--sdk-spacing-sm);
+    gap: var(--sdk-spacing-md);
     margin-bottom: var(--sdk-spacing-sm);
   }
 }
@@ -2712,16 +2784,16 @@ canvas.hiddenCanvasElement {
 /* ── Avatar ──────────────────────────────────────────── */
 
 .comment-avatar {
-  width: clamp(24px, 3cqi, 36px);
-  height: clamp(24px, 3cqi, 36px);
+  width: clamp(20px, 2.5cqi, 24px);
+  height: clamp(20px, 2.5cqi, 24px);
   border-radius: var(--sdk-border-radius-full);
   background: var(--sdk-comment-avatar-bg);
   color: var(--sdk-comment-avatar-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(10px, 1.2cqi, 14px);
-  font-weight: var(--sdk-font-weight-semibold);
+  font-size: 11px;
+  font-weight: var(--sdk-font-weight-medium);
   font-family: var(--sdk-font-family);
   flex-shrink: 0;
   text-transform: uppercase;
@@ -2732,25 +2804,18 @@ canvas.hiddenCanvasElement {
 .comment-author-info {
   flex: 1;
   min-width: 0;
-  padding-top: 1px;
 }
 
 .comment-author-row {
   display: flex;
   align-items: center;
   gap: var(--sdk-spacing-xs);
-  margin-bottom: 2px;
-}
-
-@container pdf-viewer (min-width: 900px) {
-  .comment-author-row {
-    margin-bottom: var(--sdk-spacing-xs);
-  }
+  margin-bottom: 1px;
 }
 
 .comment-author {
-  font-size: clamp(11px, 1.3cqi, 14px);
-  font-weight: var(--sdk-font-weight-semibold);
+  font-size: var(--sdk-font-size-sm);
+  font-weight: var(--sdk-font-weight-medium);
   color: var(--sdk-comment-author-color);
   font-family: var(--sdk-font-family);
   overflow: hidden;
@@ -2758,22 +2823,10 @@ canvas.hiddenCanvasElement {
   white-space: nowrap;
 }
 
-@container pdf-viewer (min-width: 900px) {
-  .comment-author {
-    font-size: var(--sdk-font-size-xs);
-  }
-}
-
-@container pdf-viewer (min-width: 1200px) {
-  .comment-author {
-    font-size: var(--sdk-font-size-sm);
-  }
-}
-
 /* ── Timestamp ───────────────────────────────────────── */
 
 .comment-timestamp {
-  font-size: clamp(9px, 1.1cqi, 12px);
+  font-size: var(--sdk-font-size-xs);
   color: var(--sdk-comment-timestamp-color);
   font-family: var(--sdk-font-family);
 }
@@ -2782,9 +2835,9 @@ canvas.hiddenCanvasElement {
 
 .comment-content {
   margin: 0;
-  font-size: clamp(10px, 1.2cqi, 12px);
+  font-size: var(--sdk-font-size-sm);
   color: var(--sdk-comment-content-color);
-  line-height: var(--sdk-line-height-tight);
+  line-height: var(--sdk-line-height-normal);
   font-family: var(--sdk-comment-font-family);
   word-wrap: break-word;
 }
@@ -2793,16 +2846,16 @@ canvas.hiddenCanvasElement {
 
 .comment-card {
   margin-bottom: var(--sdk-spacing-md);
-  padding: var(--sdk-spacing-md);
+  padding: var(--sdk-spacing-lg);
   background: var(--sdk-comment-card-bg);
   border: var(--sdk-border-width) solid var(--sdk-comment-card-border);
-  border-radius: var(--sdk-border-radius-md);
+  border-radius: var(--sdk-border-radius-lg);
 }
 
 .comment-card.highlighted {
   background: var(--sdk-comment-highlight-bg);
-  border: var(--sdk-border-width-thick) solid var(--sdk-comment-highlight-border);
-  box-shadow: 0 2px 8px rgba(255, 165, 0, 0.2);
+  border: var(--sdk-border-width) solid var(--sdk-comment-highlight-border);
+  box-shadow: 0 0 0 1px var(--sdk-comment-highlight-border);
 }
 
 /* ── Empty state ─────────────────────────────────────── */

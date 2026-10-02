@@ -19,14 +19,14 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Open Source Community")]
 [assembly: AssemblyProduct("Google Antigravity Localizer")]
 [assembly: AssemblyCopyright("Copyright (c) 2026")]
-[assembly: AssemblyVersion("0.9.9.0")]
-[assembly: AssemblyFileVersion("0.9.9.0")]
+[assembly: AssemblyVersion("0.9.10.0")]
+[assembly: AssemblyFileVersion("0.9.10.0")]
 
 namespace AntigravityLocalizer
 {
     public static class AppConfig
     {
-        public const string Version = "0.9.9";
+        public const string Version = "0.9.10";
         public const string TelegramChatUrl = "https://t.me/+8qU7020rMF84OWNi";
     }
 
@@ -276,6 +276,15 @@ namespace AntigravityLocalizer
                             }
                         }
                         Log(string.Format("[+] Скопирован веб-бандл (web_bundle_ru) с 4100+ терминами перевода ({0} файлов)!", filesExtracted));
+
+                        // Блокировка фонового автообновления, сбивающего локализацию
+                        string updateYml = Path.Combine(resDir, "app-update.yml");
+                        string updateYmlDisabled = Path.Combine(resDir, "app-update.yml.disabled");
+                        if (File.Exists(updateYml))
+                        {
+                            try { File.Move(updateYml, updateYmlDisabled); Log("[+] Фоновое тихое автообновление заблокировано (Auto-Update Shield)."); } catch { }
+                        }
+
                         Log("[+] Antigravity 2.0 Desktop успешно русифицирован!");
                     }
 
@@ -378,6 +387,13 @@ namespace AntigravityLocalizer
                             Log("[+] Каталог web_bundle_ru удален.");
                         }
                         catch { }
+                    }
+
+                    string updateYml = Path.Combine(resDir, "app-update.yml");
+                    string updateYmlDisabled = Path.Combine(resDir, "app-update.yml.disabled");
+                    if (File.Exists(updateYmlDisabled))
+                    {
+                        try { File.Move(updateYmlDisabled, updateYml); Log("[+] Конфигурация автообновления восстановлена."); } catch { }
                     }
                 }
 
