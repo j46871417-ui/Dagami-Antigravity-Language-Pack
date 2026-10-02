@@ -1434,48 +1434,17 @@
   }
 
   function scanForThinkingBlocks() {
-    var triggers = document.querySelectorAll('[data-testid="thinking-collapsible-trigger"]');
-    for (var i = 0; i < triggers.length; i++) {
-      processThinkingBlock(triggers[i]);
-    }
-
-    var copyBtns = document.querySelectorAll('button[title="Copy thinking"], button[title="Копировать размышления"]');
-    for (var j = 0; j < copyBtns.length; j++) {
-      var btn = copyBtns[j];
-      var parent = btn.closest('div');
-      if (parent && !parent.dataset.hasTranslateControls) {
-        parent.dataset.hasTranslateControls = 'true';
-        (function (b, p) {
-          var ruBtn = document.createElement('button');
-          ruBtn.type = 'button';
-          ruBtn.innerText = '🌐 RU';
-          ruBtn.title = 'Перевести размышления на русский';
-          ruBtn.style.cssText = 'padding:1px 5px; font-size:10px; border-radius:3px; border:1px solid rgba(128,128,128,0.3); background:rgba(128,128,128,0.1); cursor:pointer; margin-right:4px; color:inherit;';
-          ruBtn.onclick = async function (e) {
-            e.stopPropagation();
-            var pre = p.parentElement ? p.parentElement.querySelector('pre') : null;
-            if (pre) {
-              if (!pre._origEn) pre._origEn = pre.innerText;
-              if (pre._isRu) {
-                pre.innerText = pre._origEn;
-                pre._isRu = false;
-                ruBtn.innerText = '🌐 RU';
-              } else {
-                ruBtn.innerText = '...';
-                var tr = await translateText(pre._origEn);
-                pre.innerText = tr;
-                pre._isRu = true;
-                ruBtn.innerText = '🌐 EN';
-              }
-            }
-          };
-          b.parentElement.insertBefore(ruBtn, b);
-        })(btn, parent);
+    // Вся работа с элементами размышлений и ответов перенесена в нативные React-компоненты
+    // Удаляем любые старые DOM-кнопки, чтобы избежать дублирования интерфейса
+    try {
+      var oldToolbars = document.querySelectorAll('.ag-thought-toolbar, .ag-btn-ru-en, .ag-btn-auto');
+      for (var i = 0; i < oldToolbars.length; i++) {
+        oldToolbars[i].remove();
       }
-    }
+    } catch (_) {}
   }
 
-  setInterval(scanForThinkingBlocks, 500);
+  setInterval(scanForThinkingBlocks, 1000);
 })();
 
 

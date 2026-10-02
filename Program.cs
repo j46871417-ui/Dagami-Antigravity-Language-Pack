@@ -19,14 +19,14 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Open Source Community")]
 [assembly: AssemblyProduct("Google Antigravity Localizer")]
 [assembly: AssemblyCopyright("Copyright (c) 2026")]
-[assembly: AssemblyVersion("0.9.10.0")]
-[assembly: AssemblyFileVersion("0.9.10.0")]
+[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("1.0.0.0")]
 
 namespace AntigravityLocalizer
 {
     public static class AppConfig
     {
-        public const string Version = "0.9.10";
+        public const string Version = "1.0.0";
         public const string TelegramChatUrl = "https://t.me/+8qU7020rMF84OWNi";
     }
 
