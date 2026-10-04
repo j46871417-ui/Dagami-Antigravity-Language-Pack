@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+env:
+  PYTHONIOENCODING: utf-8
+  ANTIGRAVITY_SKIP_KILL: "1"
+
 jobs:
   test:
     runs-on: windows-latest
