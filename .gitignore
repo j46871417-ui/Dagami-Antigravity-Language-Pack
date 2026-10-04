@@ -30,6 +30,8 @@ desktop.ini
 # Временные каталоги тестов (создаются и удаляются самими тестами; исключены,
 # чтобы отладочный мусор не попал в коммит).
 tests/_asar_tmp/
+tests/_lifecycle_tmp/
+tests/_rollback_tmp/
 tests/tmp/
 scratch/
 

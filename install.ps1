@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Google Antigravity (Desktop & IDE) — Установщик русской локализации (Open Source)
 .DESCRIPTION
@@ -17,6 +17,8 @@ param(
     [string]$IdeDir = "$env:LOCALAPPDATA\Programs\Antigravity IDE",
     [string]$ExpectedHash = ""
 )
+
+$ErrorActionPreference = 'Stop'
 
 $Host.UI.RawUI.WindowTitle = "Google Antigravity - Русификатор"
 
@@ -106,16 +108,30 @@ if ($Uninstall) {
         Start-Sleep -Seconds 2
     }
 
+    $asarRestored = $false
     if (Test-Path $BackupAsar) {
         Copy-Item -Path $BackupAsar -Destination $TargetAsar -Force
         Write-Host "[+] Оригинальный app.asar успешно восстановлен из резервной копии." -ForegroundColor Green
+        $asarRestored = $true
     } else {
-        Write-Host "[!] Резервная копия app.asar.original_backup не найдена." -ForegroundColor Yellow
+        # Проверяем также версионированные бэкапы
+        $latestBak = Get-ChildItem -Path $ResourcesDir -Filter "app.asar.bak.v*" -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if ($latestBak) {
+            Copy-Item -Path $latestBak.FullName -Destination $TargetAsar -Force
+            Write-Host "[+] Оригинальный app.asar восстановлен из версионированного бэкапа ($($latestBak.Name))." -ForegroundColor Green
+            $asarRestored = $true
+        } else {
+            Write-Host "[!] Резервная копия app.asar не найдена." -ForegroundColor Yellow
+        }
     }
 
     if (Test-Path $TargetBundle) {
-        Remove-Item -Path $TargetBundle -Recurse -Force
-        Write-Host "[+] Каталог web_bundle_ru удалён." -ForegroundColor Green
+        if ($asarRestored) {
+            Remove-Item -Path $TargetBundle -Recurse -Force
+            Write-Host "[+] Каталог web_bundle_ru удалён." -ForegroundColor Green
+        } else {
+            Write-Host "[!] ВНИМАНИЕ: web_bundle_ru сохранён, так как app.asar не был восстановлен из бэкапа. Это предотвращает поломку приложения." -ForegroundColor Yellow
+        }
     }
 
     # IDE restore
@@ -188,15 +204,17 @@ try {
         Write-Host "[+] Файлы успешно загружены." -ForegroundColor Green
     }
 
-    # Закрытие запущенных процессов с контрольным polling
-    $procs = Get-Process -Name "Antigravity", "Antigravity IDE" -ErrorAction SilentlyContinue
-    if ($procs) {
-        Write-Host "[*] Закрытие запущенных процессов Antigravity..." -ForegroundColor Yellow
-        $procs | Stop-Process -Force -ErrorAction SilentlyContinue
-        $timeout = 10
-        while ((Get-Process -Name "Antigravity", "Antigravity IDE" -ErrorAction SilentlyContinue) -and ($timeout -gt 0)) {
-            Start-Sleep -Milliseconds 500
-            $timeout--
+    # Закрытие запущенных процессов с контрольным polling (если не задан ANTIGRAVITY_SKIP_KILL)
+    if (-not $env:ANTIGRAVITY_SKIP_KILL) {
+        $procs = Get-Process -Name "Antigravity", "Antigravity IDE" -ErrorAction SilentlyContinue
+        if ($procs) {
+            Write-Host "[*] Закрытие запущенных процессов Antigravity..." -ForegroundColor Yellow
+            $procs | Stop-Process -Force -ErrorAction SilentlyContinue
+            $timeout = 10
+            while ((Get-Process -Name "Antigravity", "Antigravity IDE" -ErrorAction SilentlyContinue) -and ($timeout -gt 0)) {
+                Start-Sleep -Milliseconds 500
+                $timeout--
+            }
         }
     }
 
@@ -225,6 +243,20 @@ try {
 
     # 1. Desktop русификация
     if ($HasDesktop) {
+        $exePath = Join-Path $AppDir "Antigravity.exe"
+        if (Test-Path $exePath) {
+            try {
+                $ver = (Get-Item $exePath).VersionInfo.ProductVersion
+                if ($ver -and $ver -ne "2.11.0") {
+                    throw "Версия Antigravity '$ver' не поддерживается манифестом совместимости. Поддерживаемая версия готового ядра: 2.11.0. Установка отменена без внесения изменений."
+                }
+            } catch {
+                if ($_.Exception.Message -like "*манифестом совместимости*") {
+                    throw $_
+                }
+            }
+        }
+
         if (-not (Test-Path $BackupAsar)) {
             if (Test-Path $TargetAsar) {
                 Write-Host "[*] Создание резервной копии оригинального app.asar..." -ForegroundColor Cyan

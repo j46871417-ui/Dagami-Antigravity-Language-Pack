@@ -19,14 +19,14 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Open Source Community")]
 [assembly: AssemblyProduct("Google Antigravity Localizer")]
 [assembly: AssemblyCopyright("Copyright (c) 2026")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.0.1.0")]
+[assembly: AssemblyFileVersion("1.0.1.0")]
 
 namespace AntigravityLocalizer
 {
     public static class AppConfig
     {
-        public const string Version = "1.0.0";
+        public const string Version = "1.0.1";
         public const string TelegramChatUrl = "https://t.me/+8qU7020rMF84OWNi";
     }
 
@@ -138,6 +138,10 @@ namespace AntigravityLocalizer
 
         public void KillProcesses()
         {
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTIGRAVITY_SKIP_KILL")))
+            {
+                return;
+            }
             string[] procNames = new string[] { "Antigravity", "Antigravity IDE" };
             foreach (string name in procNames)
             {
@@ -236,6 +240,22 @@ namespace AntigravityLocalizer
                     if (doDesktop && !string.IsNullOrEmpty(DesktopPath) && Directory.Exists(DesktopPath))
                     {
                         Log("\n--- Установка русификации Antigravity 2.0 Desktop ---");
+                        string exePath = Path.Combine(DesktopPath, "Antigravity.exe");
+                        if (File.Exists(exePath))
+                        {
+                            try
+                            {
+                                FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(exePath);
+                                string prodVer = fvi.ProductVersion;
+                                if (!string.IsNullOrEmpty(prodVer) && !prodVer.StartsWith("2.11.0"))
+                                {
+                                    Log(string.Format("[-] Ошибка: версия Antigravity '{0}' не поддерживается манифестом. Поддерживаемая версия готового ядра: 2.11.0. Установка прервана.", prodVer));
+                                    return false;
+                                }
+                            }
+                            catch { }
+                        }
+
                         string resDir = Path.Combine(DesktopPath, "resources");
                         if (!Directory.Exists(resDir)) Directory.CreateDirectory(resDir);
 
@@ -367,26 +387,47 @@ namespace AntigravityLocalizer
                     string targetAsar = Path.Combine(resDir, "app.asar");
                     string backupAsar = Path.Combine(resDir, "app.asar.original_backup");
 
+                    bool asarRestored = false;
                     if (File.Exists(backupAsar))
                     {
                         File.Copy(backupAsar, targetAsar, true);
                         File.Delete(backupAsar);
                         Log("[+] Оригинальный app.asar успешно восстановлен.");
+                        asarRestored = true;
                     }
                     else
                     {
-                        Log("[!] Резервная копия app.asar.original_backup не найдена.");
+                        string[] versionedBaks = Directory.GetFiles(resDir, "app.asar.bak.v*");
+                        if (versionedBaks != null && versionedBaks.Length > 0)
+                        {
+                            Array.Sort(versionedBaks);
+                            string latest = versionedBaks[versionedBaks.Length - 1];
+                            File.Copy(latest, targetAsar, true);
+                            Log("[+] Оригинальный app.asar восстановлен из версионированного бэкапа: " + Path.GetFileName(latest));
+                            asarRestored = true;
+                        }
+                        else
+                        {
+                            Log("[!] Резервная копия app.asar не найдена.");
+                        }
                     }
 
                     string webBundleRu = Path.Combine(resDir, "web_bundle_ru");
                     if (Directory.Exists(webBundleRu))
                     {
-                        try
+                        if (asarRestored)
                         {
-                            Directory.Delete(webBundleRu, true);
-                            Log("[+] Каталог web_bundle_ru удален.");
+                            try
+                            {
+                                Directory.Delete(webBundleRu, true);
+                                Log("[+] Каталог web_bundle_ru удален.");
+                            }
+                            catch { }
                         }
-                        catch { }
+                        else
+                        {
+                            Log("[!] ВНИМАНИЕ: Каталог web_bundle_ru сохранен, так как app.asar не был восстановлен из бэкапа.");
+                        }
                     }
 
                     string updateYml = Path.Combine(resDir, "app-update.yml");

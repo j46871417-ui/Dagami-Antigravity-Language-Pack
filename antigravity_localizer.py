@@ -29,6 +29,23 @@ from tkinter import filedialog, messagebox, ttk
 # Импорт обязателен явно: PyInstaller не находит его по анализу вызовов,
 # если обращаться через локальную обёртку.
 import js_literals as jsl
+from jsonc_utils import strip_jsonc, parse_jsonc, update_argv_locale
+from step_status import StepStatus, StepResult
+from compatibility import (
+    validate_asar_compatibility,
+    inject_language_server_web_bundle,
+    CompatibilityError,
+    SUPPORTED_VERSIONS,
+)
+from transaction_manager import (
+    SingleInstanceLock,
+    BackupManager,
+    TransactionJournal,
+    atomic_stage_and_replace,
+    LockError,
+)
+
+__version__ = "1.0.1"
 
 # Пути к встроенным ресурсам (совместимо с PyInstaller _MEIPASS)
 if getattr(sys, "frozen", False):
@@ -42,9 +59,49 @@ CHAT_TRANSLATIONS_FILE = BUNDLE_DIR / "translations" / "chat_strings.json"
 DOM_TRANSLATOR_FILE = BUNDLE_DIR / "translations" / "dom_translator.js"
 RU_PACK_ZIP = BUNDLE_DIR / "assets" / "ru_pack.zip"
 NLS_RU_FILE = BUNDLE_DIR / "assets" / "nls.messages.ru.json"
+WEB_BUNDLE_RU_SOURCE = BUNDLE_DIR / "resources" / "web_bundle_ru"
 
 BACKUP_SUFFIX = ".bak.original"
 CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
+
+
+def verify_bundle_integrity(bundle_dir: Path = None) -> tuple[bool, list[str]]:
+    """
+    Проверяет наличие и целостность всех обязательных компонентов установщика.
+    Возвращает (success: bool, issues: list[str]).
+    """
+    target_dir = bundle_dir or BUNDLE_DIR
+    issues = []
+
+    required_files = [
+        target_dir / "translations" / "ide_strings.json",
+        target_dir / "translations" / "desktop_strings.json",
+        target_dir / "translations" / "chat_strings.json",
+        target_dir / "translations" / "dom_translator.js",
+        target_dir / "assets" / "ru_pack.zip",
+        target_dir / "assets" / "nls.messages.ru.json",
+        target_dir / "resources" / "web_bundle_ru" / "main.js",
+        target_dir / "resources" / "web_bundle_ru" / "i18n-ru.js",
+    ]
+
+    for f in required_files:
+        if not f.exists():
+            issues.append(f"Отсутствует обязательный ресурс: {f.name}")
+        elif f.stat().st_size == 0:
+            issues.append(f"Обязательный ресурс пуст: {f.name}")
+
+    web_bundle_engine = target_dir / "resources" / "web_bundle_ru" / "i18n-ru.js"
+    if web_bundle_engine.exists():
+        try:
+            content = web_bundle_engine.read_text(encoding="utf-8")
+            required_symbols = ["MarkdownShield", "CircuitBreaker", "TwoLevelCache", "splitTextIntoSafeChunks"]
+            for sym in required_symbols:
+                if sym not in content:
+                    issues.append(f"В i18n-ru.js отсутствует критический компонент движка: {sym}")
+        except Exception as e:
+            issues.append(f"Не удалось прочитать i18n-ru.js: {e}")
+
+    return (len(issues) == 0, issues)
 
 
 def safe_print(*args, **kwargs):
@@ -108,6 +165,10 @@ def kill_antigravity_processes(log_fn=safe_print):
     """
     Завершает активные процессы Antigravity и опрашивает систему до фактического выхода процессов.
     """
+    if "unittest" in sys.modules or os.environ.get("ANTIGRAVITY_SKIP_KILL", "").lower() in ("1", "true", "yes"):
+        log_fn("[Процессы] Пропуск завершения процессов (тестовая среда / ANTIGRAVITY_SKIP_KILL).")
+        return
+
     log_fn("\n[Процессы] Завершение всех активных процессов Antigravity...")
     killed_any = False
     for proc in ANTIGRAVITY_PROCESS_NAMES:
@@ -292,16 +353,10 @@ def compute_sha256_blocks(data: bytes, block_size: int = 4194304):
 
 def strip_json_comments(text: str) -> str:
     """
-    Удаляет однострочные (//) и многострочные (/* */) комментарии из JSONC (JSON with Comments),
-    сохраняя строковые литералы без повреждений для последующего парсинга json.loads.
+    Удаляет однострочные (//) и многострочные (/* */) комментарии и завершающие
+    запятые из JSONC, сохраняя строковые литералы без повреждений.
     """
-    def replacer(match):
-        s = match.group(0)
-        if s.startswith('/'):
-            return ""
-        return s
-    pattern = re.compile(r'//.*?$|/\*.*?\*/|"(?:\\.|[^\\"])*"', re.DOTALL | re.MULTILINE)
-    return re.sub(pattern, replacer, text)
+    return strip_jsonc(text)
 
 
 PRELOAD_MARKER = "// Antigravity UI Runtime Localizer"
@@ -344,18 +399,20 @@ def replace_js_string_literals(content: str, string_map: dict[str, str], log_fn=
 
 
 class AntigravityLocalizer:
-    def __init__(self, ide_path: Path = None, desktop_path: Path = None, ide_user_data: Path = None, log_fn=safe_print):
+    def __init__(self, ide_path: Path = None, desktop_path: Path = None, ide_user_data: Path = None, log_fn=safe_print, auto_kill: bool = True):
         self.ide_path = ide_path
         self.desktop_path = desktop_path
         self.ide_user_data = ide_user_data or (Path.home() / ".antigravity-ide")
         self.log = log_fn
+        self.auto_kill = auto_kill
 
     def install_ide(self) -> bool:
         if not self.ide_path or not validate_ide_path(self.ide_path):
             self.log("[IDE] Путь к Antigravity IDE не найден или некорректен.")
             return False
 
-        kill_antigravity_processes(self.log)
+        if self.auto_kill:
+            kill_antigravity_processes(self.log)
         self.log("\n--- Русификация Antigravity IDE ---")
 
         ext_base = self.ide_path / "resources" / "app" / "extensions" / "antigravity"
@@ -370,51 +427,41 @@ class AntigravityLocalizer:
             self.log("[IDE] Ошибка: целевые файлы заблокированы внешними процессами. Прерывание.")
             return False
 
+        steps: list[StepResult] = []
+
         # 1. Языковой пакет VS Code
         ext_dir = self.ide_user_data / "extensions"
         pack_target = ext_dir / "ms-ceintl.vscode-language-pack-ru-1.106.0-universal"
         if not pack_target.exists():
             if RU_PACK_ZIP.exists():
-                self.log("[IDE] Распаковка русского языкового пакета VS Code...")
-                ext_dir.mkdir(parents=True, exist_ok=True)
-                pack_target.mkdir(parents=True, exist_ok=True)
-                with zipfile.ZipFile(RU_PACK_ZIP, "r") as zf:
-                    zf.extractall(pack_target)
-                self.log("[IDE] Языковой пакет успешно установлен.")
+                try:
+                    self.log("[IDE] Распаковка русского языкового пакета VS Code...")
+                    ext_dir.mkdir(parents=True, exist_ok=True)
+                    pack_target.mkdir(parents=True, exist_ok=True)
+                    with zipfile.ZipFile(RU_PACK_ZIP, "r") as zf:
+                        zf.extractall(pack_target)
+                    self.log("[IDE] Языковой пакет успешно установлен.")
+                    steps.append(StepResult("vscode_language_pack", StepStatus.SUCCESS, "Установлен"))
+                except Exception as e:
+                    self.log(f"[IDE] Ошибка распаковки языкового пакета: {e}")
+                    steps.append(StepResult("vscode_language_pack", StepStatus.FAILED, str(e), is_mandatory=False))
             else:
                 self.log("[IDE] Архив языкового пакета не найден, пропускаем.")
+                steps.append(StepResult("vscode_language_pack", StepStatus.SKIPPED, "Архив не найден", is_mandatory=False))
         else:
             self.log("[IDE] Языковой пакет VS Code уже установлен.")
+            steps.append(StepResult("vscode_language_pack", StepStatus.ALREADY_DONE, "Уже установлен"))
 
         # 2. argv.json -> locale: ru (с сохранением JSONC и валидацией)
-        if argv_json_path.exists():
-            backup_file(argv_json_path, self.log)
-            try:
-                with open(argv_json_path, "r", encoding="utf-8") as f:
-                    argv_content = f.read()
-
-                import re
-                if '"locale"' in argv_content:
-                    argv_content = re.sub(r'"locale"\s*:\s*"[^"]*"', '"locale": "ru"', argv_content)
-                else:
-                    argv_content = re.sub(r'(\{)', r'\1\n\t"locale": "ru",', argv_content, count=1)
-
-                # Предварительная валидация очищенного от комментариев JSON
-                clean_test = strip_json_comments(argv_content)
-                json.loads(clean_test)
-
-                with open(argv_json_path, "w", encoding="utf-8") as f:
-                    f.write(argv_content)
-
-                # Пост-валидация записанного на диск файла
-                with open(argv_json_path, "r", encoding="utf-8") as f:
-                    post_test = strip_json_comments(f.read())
-                    json.loads(post_test)
-
-                self.log("[IDE] В argv.json включен русский язык (locale: ru).")
-            except Exception as e:
-                self.log(f"[IDE] Ошибка обновления/валидации argv.json: {e}. Откат к оригиналу.")
+        if argv_json_path:
+            if argv_json_path.exists():
+                backup_file(argv_json_path, self.log)
+            if not update_argv_locale(argv_json_path, target_locale="ru", log_fn=self.log):
+                self.log("[IDE] Ошибка обновления/валидации argv.json. Откат к оригиналу.")
                 restore_file(argv_json_path, self.log)
+                steps.append(StepResult("argv_locale", StepStatus.FAILED, "Не удалось обновить argv.json", is_mandatory=False))
+            else:
+                steps.append(StepResult("argv_locale", StepStatus.SUCCESS, "locale: ru установлен"))
 
         # 3. Патч package.json расширения antigravity (через json.load/dump с валидацией)
         if pkg_path.exists() and IDE_TRANSLATIONS_FILE.exists():
@@ -468,9 +515,15 @@ class AntigravityLocalizer:
                     json.load(f)
 
                 self.log(f"[IDE] Обновлено строк в package.json: {changes}")
+                steps.append(StepResult("package_json", StepStatus.SUCCESS, f"Обновлено {changes} строк", is_mandatory=True))
             except Exception as e:
                 self.log(f"[IDE] Ошибка патчинга/валидации package.json: {e}. Откат к оригиналу.")
                 restore_file(pkg_path, self.log)
+                steps.append(StepResult("package_json", StepStatus.FAILED, str(e), is_mandatory=True))
+        elif pkg_path.exists():
+            steps.append(StepResult("package_json", StepStatus.FAILED, "Файл переводов ide_strings.json не найден", is_mandatory=True))
+        else:
+            steps.append(StepResult("package_json", StepStatus.SKIPPED, "package.json не найден", is_mandatory=False))
 
         # 4. Патч extension.js (контекстно-зависимая замена строковых литералов)
         if ext_js_path.exists() and IDE_TRANSLATIONS_FILE.exists():
@@ -487,9 +540,11 @@ class AntigravityLocalizer:
                     with open(ext_js_path, "w", encoding="utf-8") as f:
                         f.write(content)
                     self.log(f"[IDE] Заменено строковых литералов в extension.js: {changes}")
+                steps.append(StepResult("extension_js", StepStatus.SUCCESS, f"Заменено {changes} литералов", is_mandatory=True))
             except Exception as e:
                 self.log(f"[IDE] Ошибка патчинга extension.js: {e}. Откат к оригиналу.")
                 restore_file(ext_js_path, self.log)
+                steps.append(StepResult("extension_js", StepStatus.FAILED, str(e), is_mandatory=True))
 
         # 5. Патч nls.messages.json (полная русификация каркаса VS Code: меню, окна, настройки)
         nls_path = self.ide_path / "resources" / "app" / "out" / "nls.messages.json"
@@ -498,9 +553,11 @@ class AntigravityLocalizer:
             try:
                 shutil.copy2(NLS_RU_FILE, nls_path)
                 self.log("[IDE] Применена русская локализация меню и каркаса VS Code (15 180 строк).")
+                steps.append(StepResult("nls_messages", StepStatus.SUCCESS, "Применена русификация меню", is_mandatory=False))
             except Exception as e:
                 self.log(f"[IDE] Ошибка обновления nls.messages.json: {e}. Откат к оригиналу.")
                 restore_file(nls_path, self.log)
+                steps.append(StepResult("nls_messages", StepStatus.FAILED, str(e), is_mandatory=False))
 
         # 6. Патч jetskiAgent/main.js (интерфейс чата и панели агента Antigravity)
         if jetski_path.exists() and CHAT_TRANSLATIONS_FILE.exists():
@@ -516,9 +573,19 @@ class AntigravityLocalizer:
                     with open(jetski_path, "w", encoding="utf-8") as f:
                         f.write(jetski_content)
                     self.log(f"[IDE] Обновлено строк в интерфейсе агента Antigravity: {chat_changes}")
+                steps.append(StepResult("jetski_agent", StepStatus.SUCCESS, f"Обновлено {chat_changes} строк", is_mandatory=False))
             except Exception as e:
                 self.log(f"[IDE] Ошибка патчинга jetskiAgent: {e}. Откат к оригиналу.")
                 restore_file(jetski_path, self.log)
+                steps.append(StepResult("jetski_agent", StepStatus.FAILED, str(e), is_mandatory=False))
+
+        # Проверка обязательных шагов
+        failed_mandatory = [s for s in steps if not s.is_success() and s.is_mandatory]
+        if failed_mandatory:
+            self.log("\n[IDE] Русификация завершилась с ошибкой обязательных компонентов:")
+            for s in failed_mandatory:
+                self.log(f"  [-] {s.step_name}: {s.message}")
+            return False
 
         # Проверка запущенных процессов
         try:
@@ -542,21 +609,46 @@ class AntigravityLocalizer:
             self.log("[Desktop] Путь к Antigravity Desktop не найден или некорректен.")
             return False
 
-        kill_antigravity_processes(self.log)
+        if self.auto_kill:
+            kill_antigravity_processes(self.log)
         self.log("\n--- Русификация Antigravity 2.0 Desktop ---")
-        asar_path = self.desktop_path / "resources" / "app.asar"
+        res_dir = self.desktop_path / "resources"
+        asar_path = res_dir / "app.asar"
         if not asar_path.exists():
             self.log(f"[Desktop] app.asar не найден: {asar_path}")
             return False
 
-        # Polling: ожидание разблокировки app.asar процессами перед записью
-        if not wait_for_files_unlocked([asar_path], timeout=10.0, log_fn=self.log):
-            self.log(f"[Desktop] Ошибка: {asar_path.name} заблокирован другим процессом. Прерывание.")
+        # 1. Защита от параллельного запуска через файловый мьютекс
+        lock_file = res_dir / ".localizer.lock"
+        try:
+            lock = SingleInstanceLock(lock_file)
+            lock.acquire()
+        except LockError as e:
+            self.log(f"[Desktop] Ошибка блокировки: {e}")
             return False
 
-        backup_file(asar_path, self.log)
-
         try:
+            # 2. Валидация совместимости ядра через манифест до изменения файлов
+            compat = validate_asar_compatibility(asar_path)
+            if not compat.get("compatible", False):
+                self.log(f"[Desktop] Отказ совместимости: {compat.get('reason', 'Несовместимая версия ядра')}")
+                return False
+
+            # Polling: ожидание разблокировки app.asar процессами перед записью
+            if not wait_for_files_unlocked([asar_path], timeout=10.0, log_fn=self.log):
+                self.log(f"[Desktop] Ошибка: {asar_path.name} заблокирован другим процессом. Прерывание.")
+                return False
+
+            # 3. Создание бэкапа с привязкой к версии и SHA256 хешу
+            backup_mgr = BackupManager(res_dir)
+            backup_path = backup_mgr.create_backup(asar_path, version=compat.get("version", "2.11.0"))
+            self.log(f"[Desktop] Создана резервная копия ядра ({compat.get('version')}): {backup_path.name}")
+            backup_file(asar_path, self.log)  # Обратная совместимость с .bak.original
+
+            # 4. Инициализация журнала транзакции для гарантированного отката
+            journal = TransactionJournal(res_dir)
+            journal.record_modified(asar_path, backup_path)
+
             with open(DESKTOP_TRANSLATIONS_FILE, "r", encoding="utf-8") as f:
                 translations = json.load(f)
 
@@ -586,9 +678,20 @@ class AntigravityLocalizer:
             for path_str, old_offset, old_size, entry in file_list:
                 file_bytes = data[old_offset:old_offset + old_size]
 
+                # Патч languageServer.js: подключение изолированного веб-бандла
+                if path_str == "dist/languageServer.js":
+                    try:
+                        ls_text = file_bytes.decode("utf-8")
+                        new_ls_text = inject_language_server_web_bundle(ls_text)
+                        if new_ls_text != ls_text:
+                            file_bytes = new_ls_text.encode("utf-8")
+                            changes += 1
+                            self.log("[Desktop] Внедрён хук веб-бандла в dist/languageServer.js (--web_bundle_path)")
+                    except Exception as e:
+                        self.log(f"[Desktop] Ошибка патчинга languageServer.js: {e}")
+
                 if path_str in targets and targets[path_str]:
                     try:
-                        # Проверка валидности UTF-8 перед модификацией
                         file_text = file_bytes.decode("utf-8")
                         file_text, sub_changes = replace_js_string_literals(file_text, targets[path_str], self.log)
                         if sub_changes > 0:
@@ -622,16 +725,52 @@ class AntigravityLocalizer:
             new_data = b"".join(new_data_chunks)
             # Атомарная запись через временный файл и os.replace
             write_asar_atomic(asar_path, header, new_data)
-            self.log(f"[Desktop] Заменено строк в app.asar: {changes}")
+
+            # 5. Размещение веб-бандла (web_bundle_ru)
+            target_bundle = res_dir / "web_bundle_ru"
+            if not WEB_BUNDLE_RU_SOURCE.exists() or not (WEB_BUNDLE_RU_SOURCE / "i18n-ru.js").exists():
+                raise FileNotFoundError(
+                    f"Критический языковой ресурс не найден: {WEB_BUNDLE_RU_SOURCE}. "
+                    "Убедитесь, что установщик собран со всеми необходимыми ресурсами (resources/web_bundle_ru)."
+                )
+            self.log("[Desktop] Размещение веб-бандла (resources/web_bundle_ru)...")
+            target_bundle.mkdir(parents=True, exist_ok=True)
+            for root, dirs, files in os.walk(WEB_BUNDLE_RU_SOURCE):
+                rel_dir = Path(root).relative_to(WEB_BUNDLE_RU_SOURCE)
+                dest_dir = target_bundle / rel_dir
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                for f in files:
+                    src_f = Path(root) / f
+                    dst_f = dest_dir / f
+                    if not dst_f.exists():
+                        journal.record_created(dst_f)
+                    else:
+                        journal.record_modified(dst_f, dst_f)
+                    shutil.copy2(src_f, dst_f)
+            self.log("[Desktop] Языковой веб-бандл успешно размещён.")
+
+            # Успешная фиксация транзакции
+            journal.commit()
+            self.log(f"[Desktop] Заменено строк и точек внедрения в app.asar: {changes}")
             self.log("[Desktop] Русификация Desktop успешно завершена!")
             return True
         except Exception as e:
-            self.log(f"[Desktop] Ошибка патчинга app.asar: {e}. Откат к оригиналу.")
-            restore_file(asar_path, self.log)
+            self.log(f"[Desktop] Ошибка установки Desktop: {e}. Выполняется откат...")
+            try:
+                journal.rollback(log_fn=self.log)
+            except Exception as rb_err:
+                self.log(f"[Desktop] Ошибка отката журнала: {rb_err}")
+                restore_file(asar_path, self.log)
             return False
+        finally:
+            try:
+                lock.release()
+            except Exception:
+                pass
 
     def restore_all(self) -> bool:
-        kill_antigravity_processes(self.log)
+        if self.auto_kill:
+            kill_antigravity_processes(self.log)
         self.log("\n=== Откат к оригинальным файлам ===")
         restored = 0
 
@@ -656,9 +795,36 @@ class AntigravityLocalizer:
 
         # Desktop
         if self.desktop_path:
-            asar_path = self.desktop_path / "resources" / "app.asar"
-            if restore_file(asar_path, self.log):
-                restored += 1
+            res_dir = self.desktop_path / "resources"
+            asar_path = res_dir / "app.asar"
+            backup_mgr = BackupManager(res_dir)
+            latest_bak = backup_mgr.find_latest_backup(asar_path)
+            legacy_bak = asar_path.with_suffix(asar_path.suffix + BACKUP_SUFFIX)
+
+            asar_restored = False
+            if latest_bak and latest_bak.exists():
+                if backup_mgr.restore_backup(latest_bak, asar_path):
+                    self.log(f"[Desktop] Восстановлен оригинальный app.asar из {latest_bak.name}")
+                    restored += 1
+                    asar_restored = True
+            elif legacy_bak.exists():
+                if restore_file(asar_path, self.log):
+                    restored += 1
+                    asar_restored = True
+            else:
+                self.log("[Desktop] Предупреждение: резервная копия app.asar не найдена!")
+
+            # web_bundle_ru удаляется ТОЛЬКО если оригинальный app.asar успешно восстановлен
+            web_bundle = res_dir / "web_bundle_ru"
+            if web_bundle.exists():
+                if asar_restored:
+                    try:
+                        shutil.rmtree(web_bundle)
+                        self.log("[Desktop] Каталог web_bundle_ru успешно удалён.")
+                    except Exception as e:
+                        self.log(f"[Desktop] Ошибка удаления web_bundle_ru: {e}")
+                else:
+                    self.log("[Desktop] ВНИМАНИЕ: web_bundle_ru сохранён, так как app.asar не был восстановлен из бэкапа. Это предотвращает поломку приложения.")
 
         self.log(f"Всего файлов восстановлено: {restored}")
         return restored > 0
@@ -671,7 +837,7 @@ class AntigravityLocalizer:
 class LocalizerGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Google Antigravity — Русификатор")
+        self.root.title(f"Google Antigravity — Русификатор v{__version__}")
         self.root.geometry("640x540")
         self.root.minsize(580, 480)
 
@@ -817,24 +983,29 @@ class LocalizerGUI:
         self.log_text.delete("1.0", tk.END)
 
         def worker():
-            ide_p = Path(self.ide_path_var.get()) if self.opt_ide.get() else None
-            desk_p = Path(self.desktop_path_var.get()) if self.opt_desktop.get() else None
+            try:
+                ide_p = Path(self.ide_path_var.get()) if self.opt_ide.get() else None
+                desk_p = Path(self.desktop_path_var.get()) if self.opt_desktop.get() else None
 
-            localizer = AntigravityLocalizer(
-                ide_path=ide_p,
-                desktop_path=desk_p,
-                log_fn=self.log,
-            )
+                localizer = AntigravityLocalizer(
+                    ide_path=ide_p,
+                    desktop_path=desk_p,
+                    log_fn=self.log,
+                )
 
-            success = True
-            if self.opt_ide.get():
-                if not localizer.install_ide():
-                    success = False
-            if self.opt_desktop.get():
-                if not localizer.install_desktop():
-                    success = False
+                success = True
+                if self.opt_ide.get():
+                    if not ide_p or not localizer.install_ide():
+                        success = False
+                if self.opt_desktop.get():
+                    if not desk_p or not localizer.install_desktop():
+                        success = False
 
-            self.root.after(0, lambda: self._on_finish("Установка завершена!" if success else "Установка завершена с предупреждениями."))
+                msg = "Установка завершена успешно!" if success else "Установка завершилась с ошибками. Проверьте лог."
+                self.root.after(0, lambda: self._on_finish(msg, is_error=not success))
+            except Exception as ex:
+                self.log(f"\n[-] Критическая ошибка установки: {ex}")
+                self.root.after(0, lambda: self._on_finish(f"Критическая ошибка: {ex}", is_error=True))
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -843,23 +1014,31 @@ class LocalizerGUI:
         self.log_text.delete("1.0", tk.END)
 
         def worker():
-            ide_p = Path(self.ide_path_var.get())
-            desk_p = Path(self.desktop_path_var.get())
+            try:
+                ide_p = Path(self.ide_path_var.get()) if self.ide_path_var.get() else None
+                desk_p = Path(self.desktop_path_var.get()) if self.desktop_path_var.get() else None
 
-            localizer = AntigravityLocalizer(
-                ide_path=ide_p,
-                desktop_path=desk_p,
-                log_fn=self.log,
-            )
-            localizer.restore_all()
-            self.root.after(0, lambda: self._on_finish("Откат к оригинальным файлам завершён!"))
+                localizer = AntigravityLocalizer(
+                    ide_path=ide_p,
+                    desktop_path=desk_p,
+                    log_fn=self.log,
+                )
+                success = localizer.restore_all()
+                msg = "Откат к оригинальным файлам завершён успешно!" if success else "Откат не выполнен или не найдены бэкапы."
+                self.root.after(0, lambda: self._on_finish(msg, is_error=not success))
+            except Exception as ex:
+                self.log(f"\n[-] Ошибка отката: {ex}")
+                self.root.after(0, lambda: self._on_finish(f"Ошибка отката: {ex}", is_error=True))
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _on_finish(self, message: str):
+    def _on_finish(self, message: str, is_error: bool = False):
         self._set_buttons_state(True)
         self._update_status()
-        messagebox.showinfo("Готово", message)
+        if is_error:
+            messagebox.showerror("Ошибка", message)
+        else:
+            messagebox.showinfo("Готово", message)
 
 
 # =============================================================================
@@ -868,6 +1047,8 @@ class LocalizerGUI:
 
 def main():
     parser = argparse.ArgumentParser(description="Русификатор Google Antigravity")
+    parser.add_argument("--version", action="version", version=f"Antigravity Localizer v{__version__}")
+    parser.add_argument("--verify-bundle", action="store_true", help="Проверить целостность встроенных ресурсов")
     parser.add_argument("--cli", action="store_true", help="Запуск в консольном режиме без GUI")
     parser.add_argument("--install", action="store_true", help="Установить русификацию")
     parser.add_argument("--restore", action="store_true", help="Откатить к оригиналу")
@@ -876,22 +1057,53 @@ def main():
 
     args = parser.parse_args()
 
+    if args.verify_bundle:
+        ok, issues = verify_bundle_integrity()
+        if ok:
+            safe_print(f"[+] Все ресурсы и веб-бандл Antigravity Localizer v{__version__} успешно верифицированы.")
+            sys.exit(0)
+        else:
+            safe_print(f"[-] Ошибки верификации ресурсов Antigravity Localizer v{__version__}:")
+            for iss in issues:
+                safe_print(f"    - {iss}")
+            sys.exit(1)
+
     default_paths = get_default_paths()
     ide_p = Path(args.ide_path) if args.ide_path else default_paths["ide_path"]
     desk_p = Path(args.desktop_path) if args.desktop_path else default_paths["desktop_path"]
 
     if args.cli or args.install or args.restore:
+        has_error = False
+
+        if args.ide_path and not validate_ide_path(ide_p):
+            safe_print(f"[-] Ошибка: указан неверный путь к Antigravity IDE: {args.ide_path}")
+            sys.exit(1)
+        if args.desktop_path and not validate_desktop_path(desk_p):
+            safe_print(f"[-] Ошибка: указан неверный путь к Antigravity Desktop: {args.desktop_path}")
+            sys.exit(1)
+
+        if not ide_p and not desk_p:
+            safe_print("[-] Ошибка: целевые пути Antigravity не найдены. Укажите --ide-path или --desktop-path.")
+            sys.exit(1)
+
         localizer = AntigravityLocalizer(ide_path=ide_p, desktop_path=desk_p)
         if args.restore:
-            localizer.restore_all()
+            if not localizer.restore_all():
+                has_error = True
         elif args.install:
             if ide_p:
-                localizer.install_ide()
+                if not localizer.install_ide():
+                    has_error = True
             if desk_p:
-                localizer.install_desktop()
+                if not localizer.install_desktop():
+                    has_error = True
         else:
-            print("Укажите --install или --restore для CLI режима.")
-        return
+            safe_print("Укажите --install или --restore для CLI режима.")
+            sys.exit(1)
+
+        if has_error:
+            sys.exit(1)
+        sys.exit(0)
 
     # Запуск графического интерфейса
     root = tk.Tk()

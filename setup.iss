@@ -1,5 +1,5 @@
 #define MyAppName "Google Antigravity Localizer"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "Antigravity Open Source Community"
 #define MyAppURL "https://github.com/j46871417-ui/Antigravity-Localizer"
 
@@ -16,7 +16,7 @@ DisableDirPage=no
 DirExistsWarning=no
 DisableProgramGroupPage=yes
 DisableFinishedPage=yes
-OutputBaseFilename=AntigravityLocalizer_v1.0.0
+OutputBaseFilename=AntigravityLocalizer_v1.0.1
 OutputDir=.
 Compression=lzma2/ultra64
 SolidCompression=yes

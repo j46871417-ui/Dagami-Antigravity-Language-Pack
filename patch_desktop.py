@@ -20,6 +20,8 @@ import struct
 import sys
 from pathlib import Path
 
+from js_literals import replace_js_string_literals
+
 SCRIPT_DIR = Path(__file__).parent
 TRANSLATIONS_FILE = SCRIPT_DIR / "translations" / "desktop_strings.json"
 
@@ -134,13 +136,7 @@ def patch_desktop(dry_run: bool = False) -> int:
         if path_str in targets and targets[path_str]:
             replacements = targets[path_str]
             file_text = file_bytes.decode("utf-8", errors="replace")
-            sub_changes = 0
-            for en_str, ru_str in replacements.items():
-                if en_str in file_text:
-                    count = file_text.count(en_str)
-                    print(f"  [{path_str}] ({count}x): '{en_str}' -> '{ru_str}'")
-                    file_text = file_text.replace(en_str, ru_str)
-                    sub_changes += count
+            file_text, sub_changes = replace_js_string_literals(file_text, replacements, log_fn=print)
             if sub_changes > 0:
                 changes += sub_changes
                 file_bytes = file_text.encode("utf-8")
