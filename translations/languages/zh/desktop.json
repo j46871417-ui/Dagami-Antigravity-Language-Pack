@@ -1,0 +1,22 @@
+{
+  "menu": {
+    "New Window": "新建窗口",
+    "Docs": "文档",
+    "Check for Updates": "检查更新",
+    "Connect to WSL": "连接到 WSL",
+    "Reopen Locally": "在本地重新打开"
+  },
+  "tray": {
+    "No agents running": "没有运行中的智能体",
+    "agent running": "个智能体运行中",
+    "agents running": "个智能体运行中",
+    "Quit": "退出"
+  },
+  "wizard": {
+    "Welcome to Antigravity": "欢迎使用 Antigravity",
+    "Setting up…": "正在配置…",
+    "Welcome to the new Antigravity!": "欢迎使用全新的 Antigravity！",
+    "Download the Antigravity IDE": "下载 Antigravity IDE",
+    "Explore the new Antigravity": "探索全新的 Antigravity"
+  }
+}

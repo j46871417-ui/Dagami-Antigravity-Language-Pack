@@ -14,20 +14,21 @@ using System.Threading;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("Google Antigravity Localizer")]
-[assembly: AssemblyDescription("Google Antigravity Russian Localization Suite")]
-[assembly: AssemblyCompany("Open Source Community")]
-[assembly: AssemblyProduct("Google Antigravity Localizer")]
-[assembly: AssemblyCopyright("Copyright (c) 2026")]
-[assembly: AssemblyVersion("1.0.1.0")]
-[assembly: AssemblyFileVersion("1.0.1.0")]
+[assembly: AssemblyTitle("Dagami Antigravity Language Pack")]
+[assembly: AssemblyDescription("Dagami Antigravity Multi-Language Localization Suite")]
+[assembly: AssemblyCompany("Dagami & Open Source Community")]
+[assembly: AssemblyProduct("Dagami Antigravity Language Pack")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
 
 namespace AntigravityLocalizer
 {
     public static class AppConfig
     {
-        public const string Version = "1.0.1";
+        public const string Version = "1.1.0";
+        public const string AppName = "Dagami Antigravity Language Pack";
         public const string TelegramChatUrl = "https://t.me/+8qU7020rMF84OWNi";
+        public const string DonationUrl = "https://pay.cloudtips.ru/p/671fda86";
     }
 
     static class Program

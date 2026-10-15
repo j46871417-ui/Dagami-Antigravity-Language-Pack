@@ -1,0 +1,16 @@
+{
+  "code": "zh",
+  "name": "Chinese (Simplified)",
+  "nativeName": "简体中文",
+  "version": "1.0.0",
+  "translatorTarget": "zh-CN",
+  "flag": "🇨🇳",
+  "buttonLabel": "🌐 ZH",
+  "buttonTitle": "翻译思考过程为中文",
+  "autoLabelOn": "⚡ 自动: 开",
+  "autoLabelOff": "⚡ 自动: 关",
+  "autoTitle": "自动翻译思考过程",
+  "originalButton": "🌐 EN",
+  "originalTitle": "显示英文原文",
+  "vscodeLocale": "zh-cn"
+}

@@ -1,0 +1,22 @@
+{
+  "menu": {
+    "New Window": "Nouvelle fenêtre",
+    "Docs": "Documentation",
+    "Check for Updates": "Rechercher les mises à jour",
+    "Connect to WSL": "Se connecter à WSL",
+    "Reopen Locally": "Rouvrir localement"
+  },
+  "tray": {
+    "No agents running": "Aucun agent en cours",
+    "agent running": "agent en cours",
+    "agents running": "agents en cours",
+    "Quit": "Quitter"
+  },
+  "wizard": {
+    "Welcome to Antigravity": "Bienvenue sur Antigravity",
+    "Setting up…": "Configuration…",
+    "Welcome to the new Antigravity!": "Bienvenue dans le nouvel Antigravity !",
+    "Download the Antigravity IDE": "Télécharger Antigravity IDE",
+    "Explore the new Antigravity": "Explorer le nouvel Antigravity"
+  }
+}

@@ -1046,70 +1046,10 @@ class LocalizerGUI:
 # =============================================================================
 
 def main():
-    parser = argparse.ArgumentParser(description="Русификатор Google Antigravity")
-    parser.add_argument("--version", action="version", version=f"Antigravity Localizer v{__version__}")
-    parser.add_argument("--verify-bundle", action="store_true", help="Проверить целостность встроенных ресурсов")
-    parser.add_argument("--cli", action="store_true", help="Запуск в консольном режиме без GUI")
-    parser.add_argument("--install", action="store_true", help="Установить русификацию")
-    parser.add_argument("--restore", action="store_true", help="Откатить к оригиналу")
-    parser.add_argument("--ide-path", type=str, help="Путь к Antigravity IDE")
-    parser.add_argument("--desktop-path", type=str, help="Путь к Antigravity Desktop")
-
-    args = parser.parse_args()
-
-    if args.verify_bundle:
-        ok, issues = verify_bundle_integrity()
-        if ok:
-            safe_print(f"[+] Все ресурсы и веб-бандл Antigravity Localizer v{__version__} успешно верифицированы.")
-            sys.exit(0)
-        else:
-            safe_print(f"[-] Ошибки верификации ресурсов Antigravity Localizer v{__version__}:")
-            for iss in issues:
-                safe_print(f"    - {iss}")
-            sys.exit(1)
-
-    default_paths = get_default_paths()
-    ide_p = Path(args.ide_path) if args.ide_path else default_paths["ide_path"]
-    desk_p = Path(args.desktop_path) if args.desktop_path else default_paths["desktop_path"]
-
-    if args.cli or args.install or args.restore:
-        has_error = False
-
-        if args.ide_path and not validate_ide_path(ide_p):
-            safe_print(f"[-] Ошибка: указан неверный путь к Antigravity IDE: {args.ide_path}")
-            sys.exit(1)
-        if args.desktop_path and not validate_desktop_path(desk_p):
-            safe_print(f"[-] Ошибка: указан неверный путь к Antigravity Desktop: {args.desktop_path}")
-            sys.exit(1)
-
-        if not ide_p and not desk_p:
-            safe_print("[-] Ошибка: целевые пути Antigravity не найдены. Укажите --ide-path или --desktop-path.")
-            sys.exit(1)
-
-        localizer = AntigravityLocalizer(ide_path=ide_p, desktop_path=desk_p)
-        if args.restore:
-            if not localizer.restore_all():
-                has_error = True
-        elif args.install:
-            if ide_p:
-                if not localizer.install_ide():
-                    has_error = True
-            if desk_p:
-                if not localizer.install_desktop():
-                    has_error = True
-        else:
-            safe_print("Укажите --install или --restore для CLI режима.")
-            sys.exit(1)
-
-        if has_error:
-            sys.exit(1)
-        sys.exit(0)
-
-    # Запуск графического интерфейса
-    root = tk.Tk()
-    app = LocalizerGUI(root)
-    root.mainloop()
+    import dagami_ag_localizer
+    dagami_ag_localizer.main()
 
 
 if __name__ == "__main__":
     main()
+

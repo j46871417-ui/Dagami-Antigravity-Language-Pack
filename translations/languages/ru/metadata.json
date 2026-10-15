@@ -1,0 +1,16 @@
+{
+  "code": "ru",
+  "name": "Russian",
+  "nativeName": "Русский",
+  "version": "1.0.0",
+  "translatorTarget": "ru",
+  "flag": "🇷🇺",
+  "buttonLabel": "🌐 RU",
+  "buttonTitle": "Перевести размышления на русский",
+  "autoLabelOn": "⚡ Авто: ВКЛ",
+  "autoLabelOff": "⚡ Авто: ВЫКЛ",
+  "autoTitle": "Автоперевод мыслей",
+  "originalButton": "🌐 EN",
+  "originalTitle": "Показать оригинал на английском",
+  "vscodeLocale": "ru"
+}
