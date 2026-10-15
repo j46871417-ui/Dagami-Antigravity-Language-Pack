@@ -75,16 +75,24 @@ def get_git_token() -> str:
             return line.split("=", 1)[1].strip()
     raise RuntimeError("Не удалось получить GitHub Token из git credential helper.")
 
-def api_request(url: str, method: str = "GET", data: bytes = None, headers: dict = None):
-    req = urllib.request.Request(url, data=data, method=method)
-    if headers:
-        for k, v in headers.items():
-            req.add_header(k, v)
-    try:
-        with urllib.request.urlopen(req) as resp:
-            return resp.status, resp.read()
-    except urllib.error.HTTPError as e:
-        return e.code, e.read()
+def api_request(url: str, method: str = "GET", data: bytes = None, headers: dict = None, max_retries: int = 5):
+    import time
+    for attempt in range(1, max_retries + 1):
+        req = urllib.request.Request(url, data=data, method=method)
+        if headers:
+            for k, v in headers.items():
+                req.add_header(k, v)
+        try:
+            with urllib.request.urlopen(req, timeout=180) as resp:
+                return resp.status, resp.read()
+        except urllib.error.HTTPError as e:
+            return e.code, e.read()
+        except Exception as e:
+            if attempt < max_retries:
+                print(f"  [!] Transient error on attempt {attempt}/{max_retries}: {e}. Retrying in 5s...")
+                time.sleep(5)
+            else:
+                raise
 
 def main():
     token = get_git_token()
@@ -165,10 +173,10 @@ def main():
             continue
 
         name = asset_path.name
-        # Delete existing asset with same name if already uploaded
+        # Skip if already successfully uploaded
         if name in existing_assets:
-            print(f"[*] Deleting old asset: {name} (id: {existing_assets[name]})...")
-            api_request(f"{base_api}/releases/assets/{existing_assets[name]}", method="DELETE", headers=headers)
+            print(f"[*] Asset already exists: {name}. Skipping...")
+            continue
 
         print(f"[*] Uploading asset: {name} ({asset_path.stat().st_size / (1024*1024):.2f} MB)...")
         content_type = mimetypes.guess_type(asset_path)[0] or "application/octet-stream"
