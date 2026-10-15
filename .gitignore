@@ -34,5 +34,6 @@ tests/_lifecycle_tmp/
 tests/_rollback_tmp/
 tests/tmp/
 scratch/
+release_dist/
 
 

@@ -83,6 +83,21 @@ class TestDagamiMultilingualPacks(unittest.TestCase):
         self.assertIn('TARGET_LANG = "es"', step3)
         self.assertNotIn('TARGET_LANG = "zh-CN"', step3)
 
+    def test_action_card_rules_present(self):
+        for code in ["ru", "zh", "es", "ja", "de", "fr"]:
+            js = dtb.build_runtime_translator_js(code)
+            self.assertIn("Searching for", js)
+            self.assertIn("Thought for", js)
+            self.assertIn("Reading", js)
+            self.assertIn("Editing", js)
+
+    def test_thought_toolbar_styling_and_isolation(self):
+        js = dtb.build_runtime_translator_js("ru")
+        self.assertIn("display:inline-flex !important", js)
+        self.assertIn("white-space:nowrap !important", js)
+        self.assertIn("ag-thought-overlay", js)
+        self.assertIn("stopEvt", js)
+
 
 if __name__ == "__main__":
     unittest.main()

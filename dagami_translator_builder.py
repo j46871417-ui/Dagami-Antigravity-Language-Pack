@@ -4,44 +4,229 @@ Generates JavaScript code injected into dist/preload.js for any supported langua
 """
 
 import json
+import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).parent
+if getattr(sys, "frozen", False):
+    REPO_ROOT = Path(sys._MEIPASS)
+else:
+    REPO_ROOT = Path(__file__).resolve().parent
+
 LANG_ROOT = REPO_ROOT / "translations" / "languages"
 PRELOAD_MARKER = "// Antigravity UI Runtime Localizer"
 
 RULE_TEMPLATES = {
     "ru": [
+        ('^Searching for\\s+(.+)$', 'return "Поиск " + m[1];'),
+        ('^Searched for\\s+(.+)$', 'return "Поиск завершен: " + m[1];'),
+        ('^Searching Moma for\\s+(.+)$', 'return "Поиск в Moma: " + m[1];'),
+        ('^Searched Moma for\\s+(.+)$', 'return "Поиск в Moma завершен: " + m[1];'),
+        ('^Reading\\s+(.+)$', 'return "Чтение " + m[1];'),
+        ('^Read\\s+(.+)$', 'return "Прочитано: " + m[1];'),
+        ('^Editing\\s+(.+)$', 'return "Редактирование " + m[1];'),
+        ('^Edited\\s+(.+)$', 'return "Отредактировано: " + m[1];'),
+        ('^Writing\\s+(.+)$', 'return "Запись " + m[1];'),
+        ('^Written\\s+(.+)$', 'return "Записано: " + m[1];'),
+        ('^Running\\s+(.+)$', 'return "Выполнение " + m[1];'),
+        ('^Ran\\s+(.+)$', 'return "Выполнено: " + m[1];'),
+        ('^Executing\\s+(.+)$', 'return "Выполнение " + m[1];'),
+        ('^Executed\\s+(.+)$', 'return "Выполнено: " + m[1];'),
+        ('^Creating\\s+(.+)$', 'return "Создание " + m[1];'),
+        ('^Created\\s+(.+)$', 'return "Создано: " + m[1];'),
+        ('^Deleting\\s+(.+)$', 'return "Удаление " + m[1];'),
+        ('^Deleted\\s+(.+)$', 'return "Удалено: " + m[1];'),
+        ('^Analyzing\\s+(.+)$', 'return "Анализ " + m[1];'),
+        ('^Analyzed\\s+(.+)$', 'return "Проанализировано: " + m[1];'),
+        ('^Listing\\s+(.+)$', 'return "Просмотр каталога " + m[1];'),
+        ('^Listed\\s+(.+)$', 'return "Просмотрен каталог: " + m[1];'),
+        ('^Thought for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "Размышлял " + m[1] + " с" + m[2];'),
+        ('^Thought for\\s+([\\d.]+)\\s*(?:m|minutes?)(.*)$', 'return "Размышлял " + m[1] + " мин" + m[2];'),
+        ('^Thought for\\s+([\\d.]+)\\s*(?:h|hours?)(.*)$', 'return "Размышлял " + m[1] + " ч" + m[2];'),
+        ('^Thinking for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "Размышляет " + m[1] + " с" + m[2];'),
+        ('^Thinking for\\s+([\\d.]+)\\s*(?:m|minutes?)(.*)$', 'return "Размышляет " + m[1] + " мин" + m[2];'),
+        ('^Worked for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "Работал " + m[1] + " с" + m[2];'),
+        ('^Worked for\\s+([\\d.]+)\\s*(?:m|minutes?)(.*)$', 'return "Работал " + m[1] + " мин" + m[2];'),
+        ('^Working for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "Работает " + m[1] + " с" + m[2];'),
+        ('^Working for\\s+([\\d.]+)\\s*(?:m|minutes?)(.*)$', 'return "Работает " + m[1] + " мин" + m[2];'),
+        ('^Ran for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "Выполнялся " + m[1] + " с" + m[2];'),
+        ('^Ran for\\s+([\\d.]+)\\s*(?:m|minutes?)(.*)$', 'return "Выполнялся " + m[1] + " мин" + m[2];'),
+        ('^Step\\s+(\\d+)\\s+of\\s+(\\d+)$', 'return "Шаг " + m[1] + " из " + m[2];'),
         ('^([0-9]+)\\s*lines?\\s*added$', 'return "Добавлено строк: " + m[1];'),
         ('^([0-9]+)\\s*lines?\\s*removed$', 'return "Удалено строк: " + m[1];'),
         ('^([0-9]+)\\s*lines?\\s*changed$', 'return "Изменено строк: " + m[1];'),
+        ('^([0-9]+)\\s*files?\\s*changed$', 'return "Изменено файлов: " + m[1];'),
+        ('^([0-9]+)\\s*files?\\s*created$', 'return "Создано файлов: " + m[1];'),
+        ('^([0-9]+)\\s*files?\\s*deleted$', 'return "Удалено файлов: " + m[1];'),
         ('^([0-9]+)\\s+agents?\\s+running$', 'return "Запущено агентов: " + m[1];'),
         ('^([0-9]+)\\s+of\\s+([0-9]+)$', 'return m[1] + " из " + m[2];'),
         ('^([0-9]+)\\s+items?$', 'return m[1] + " эл.";'),
+        ('^([0-9]+)\\s+results?$', 'return m[1] + " рез.";'),
+        ('^Clicking element\\s+"?(.+?)"?$', 'return "Клик по элементу \\"" + m[1] + "\\"";'),
+        ('^Clicked element\\s+"?(.+?)"?$', 'return "Кликнут элемент \\"" + m[1] + "\\"";'),
+        ('^Error while running:\\s*(.*)$', 'return "Ошибка при выполнении: " + m[1];'),
     ],
     "zh": [
+        ('^Searching for\\s+(.+)$', 'return "正在搜索 " + m[1];'),
+        ('^Searched for\\s+(.+)$', 'return "已搜索: " + m[1];'),
+        ('^Reading\\s+(.+)$', 'return "正在读取 " + m[1];'),
+        ('^Read\\s+(.+)$', 'return "已读取: " + m[1];'),
+        ('^Editing\\s+(.+)$', 'return "正在编辑 " + m[1];'),
+        ('^Edited\\s+(.+)$', 'return "已编辑: " + m[1];'),
+        ('^Writing\\s+(.+)$', 'return "正在写入 " + m[1];'),
+        ('^Running\\s+(.+)$', 'return "正在运行 " + m[1];'),
+        ('^Ran\\s+(.+)$', 'return "已运行: " + m[1];'),
+        ('^Executing\\s+(.+)$', 'return "正在执行 " + m[1];'),
+        ('^Executed\\s+(.+)$', 'return "已执行: " + m[1];'),
+        ('^Creating\\s+(.+)$', 'return "正在创建 " + m[1];'),
+        ('^Created\\s+(.+)$', 'return "已创建: " + m[1];'),
+        ('^Deleting\\s+(.+)$', 'return "正在删除 " + m[1];'),
+        ('^Deleted\\s+(.+)$', 'return "已删除: " + m[1];'),
+        ('^Analyzing\\s+(.+)$', 'return "正在分析 " + m[1];'),
+        ('^Analyzed\\s+(.+)$', 'return "已分析: " + m[1];'),
+        ('^Thought for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "思考了 " + m[1] + " 秒" + m[2];'),
+        ('^Thought for\\s+([\\d.]+)\\s*(?:m|minutes?)(.*)$', 'return "思考了 " + m[1] + " 分钟" + m[2];'),
+        ('^Thinking for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "正在思考 " + m[1] + " 秒" + m[2];'),
+        ('^Worked for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "工作了 " + m[1] + " 秒" + m[2];'),
+        ('^Step\\s+(\\d+)\\s+of\\s+(\\d+)$', 'return "第 " + m[1] + " 步，共 " + m[2] + " 步";'),
         ('^([0-9]+)\\s*lines?\\s*added$', 'return "添加了 " + m[1] + " 行";'),
         ('^([0-9]+)\\s*lines?\\s*removed$', 'return "删除了 " + m[1] + " 行";'),
         ('^([0-9]+)\\s*lines?\\s*changed$', 'return "修改了 " + m[1] + " 行";'),
+        ('^([0-9]+)\\s*files?\\s*changed$', 'return "修改了 " + m[1] + " 个文件";'),
+        ('^([0-9]+)\\s*files?\\s*created$', 'return "创建了 " + m[1] + " 个文件";'),
+        ('^([0-9]+)\\s*files?\\s*deleted$', 'return "删除了 " + m[1] + " 个文件";'),
         ('^([0-9]+)\\s+agents?\\s+running$', 'return m[1] + " 个智能体运行中";'),
         ('^([0-9]+)\\s+of\\s+([0-9]+)$', 'return m[1] + " / " + m[2];'),
         ('^([0-9]+)\\s+items?$', 'return m[1] + " 项";'),
+        ('^([0-9]+)\\s+results?$', 'return m[1] + " 条结果";'),
     ],
     "es": [
+        ('^Searching for\\s+(.+)$', 'return "Buscando " + m[1];'),
+        ('^Searched for\\s+(.+)$', 'return "Búsqueda finalizada: " + m[1];'),
+        ('^Reading\\s+(.+)$', 'return "Leyendo " + m[1];'),
+        ('^Read\\s+(.+)$', 'return "Leído: " + m[1];'),
+        ('^Editing\\s+(.+)$', 'return "Editando " + m[1];'),
+        ('^Edited\\s+(.+)$', 'return "Editado: " + m[1];'),
+        ('^Writing\\s+(.+)$', 'return "Escribiendo " + m[1];'),
+        ('^Running\\s+(.+)$', 'return "Ejecutando " + m[1];'),
+        ('^Ran\\s+(.+)$', 'return "Ejecutado: " + m[1];'),
+        ('^Executing\\s+(.+)$', 'return "Ejecutando " + m[1];'),
+        ('^Executed\\s+(.+)$', 'return "Ejecutado: " + m[1];'),
+        ('^Creating\\s+(.+)$', 'return "Creando " + m[1];'),
+        ('^Created\\s+(.+)$', 'return "Creado: " + m[1];'),
+        ('^Deleting\\s+(.+)$', 'return "Eliminando " + m[1];'),
+        ('^Deleted\\s+(.+)$', 'return "Eliminado: " + m[1];'),
+        ('^Analyzing\\s+(.+)$', 'return "Analizando " + m[1];'),
+        ('^Analyzed\\s+(.+)$', 'return "Analizado: " + m[1];'),
+        ('^Thought for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "Pensó durante " + m[1] + " s" + m[2];'),
+        ('^Thought for\\s+([\\d.]+)\\s*(?:m|minutes?)(.*)$', 'return "Pensó durante " + m[1] + " min" + m[2];'),
+        ('^Thinking for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "Pensando " + m[1] + " s" + m[2];'),
+        ('^Worked for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "Trabajó durante " + m[1] + " s" + m[2];'),
+        ('^Step\\s+(\\d+)\\s+of\\s+(\\d+)$', 'return "Paso " + m[1] + " de " + m[2];'),
         ('^([0-9]+)\\s*lines?\\s*added$', 'return "Líneas añadidas: " + m[1];'),
         ('^([0-9]+)\\s*lines?\\s*removed$', 'return "Líneas eliminadas: " + m[1];'),
         ('^([0-9]+)\\s*lines?\\s*changed$', 'return "Líneas modificadas: " + m[1];'),
+        ('^([0-9]+)\\s*files?\\s*changed$', 'return "Archivos modificados: " + m[1];'),
+        ('^([0-9]+)\\s*files?\\s*created$', 'return "Archivos creados: " + m[1];'),
+        ('^([0-9]+)\\s*files?\\s*deleted$', 'return "Archivos eliminados: " + m[1];'),
         ('^([0-9]+)\\s+agents?\\s+running$', 'return "Agentes activos: " + m[1];'),
         ('^([0-9]+)\\s+of\\s+([0-9]+)$', 'return m[1] + " de " + m[2];'),
         ('^([0-9]+)\\s+items?$', 'return m[1] + " elementos";'),
+        ('^([0-9]+)\\s+results?$', 'return m[1] + " resultados";'),
     ],
     "ja": [
+        ('^Searching for\\s+(.+)$', 'return m[1] + " を検索中";'),
+        ('^Searched for\\s+(.+)$', 'return m[1] + " の検索完了";'),
+        ('^Reading\\s+(.+)$', 'return m[1] + " を読み込み中";'),
+        ('^Read\\s+(.+)$', 'return m[1] + " を読み込み完了";'),
+        ('^Editing\\s+(.+)$', 'return m[1] + " を編集中";'),
+        ('^Edited\\s+(.+)$', 'return m[1] + " の編集完了";'),
+        ('^Running\\s+(.+)$', 'return m[1] + " を実行中";'),
+        ('^Ran\\s+(.+)$', 'return m[1] + " を実行完了";'),
+        ('^Executing\\s+(.+)$', 'return m[1] + " を実行中";'),
+        ('^Executed\\s+(.+)$', 'return m[1] + " の実行完了";'),
+        ('^Creating\\s+(.+)$', 'return m[1] + " を作成中";'),
+        ('^Created\\s+(.+)$', 'return m[1] + " を作成完了";'),
+        ('^Deleting\\s+(.+)$', 'return m[1] + " を削除中";'),
+        ('^Deleted\\s+(.+)$', 'return m[1] + " を削除完了";'),
+        ('^Analyzing\\s+(.+)$', 'return m[1] + " を分析中";'),
+        ('^Analyzed\\s+(.+)$', 'return m[1] + " の分析完了";'),
+        ('^Thought for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return m[1] + " 秒間思考" + m[2];'),
+        ('^Thought for\\s+([\\d.]+)\\s*(?:m|minutes?)(.*)$', 'return m[1] + " 分間思考" + m[2];'),
+        ('^Thinking for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return m[1] + " 秒間思考中" + m[2];'),
+        ('^Worked for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return m[1] + " 秒間処理" + m[2];'),
+        ('^Step\\s+(\\d+)\\s+of\\s+(\\d+)$', 'return "ステップ " + m[1] + " / " + m[2];'),
         ('^([0-9]+)\\s*lines?\\s*added$', 'return m[1] + " 行追加";'),
         ('^([0-9]+)\\s*lines?\\s*removed$', 'return m[1] + " 行削除";'),
         ('^([0-9]+)\\s*lines?\\s*changed$', 'return m[1] + " 行変更";'),
+        ('^([0-9]+)\\s*files?\\s*changed$', 'return m[1] + " 件の変更されたファイル";'),
+        ('^([0-9]+)\\s*files?\\s*created$', 'return m[1] + " 件の新規作成ファイル";'),
+        ('^([0-9]+)\\s*files?\\s*deleted$', 'return m[1] + " 件の削除されたファイル";'),
         ('^([0-9]+)\\s+agents?\\s+running$', 'return m[1] + " 件のエージェントが実行中";'),
         ('^([0-9]+)\\s+of\\s+([0-9]+)$', 'return m[1] + " / " + m[2];'),
         ('^([0-9]+)\\s+items?$', 'return m[1] + " 件";'),
+        ('^([0-9]+)\\s+results?$', 'return m[1] + " 件の結果";'),
+    ],
+    "de": [
+        ('^Searching for\\s+(.+)$', 'return "Suche nach " + m[1];'),
+        ('^Searched for\\s+(.+)$', 'return "Suche abgeschlossen: " + m[1];'),
+        ('^Reading\\s+(.+)$', 'return "Lese " + m[1];'),
+        ('^Read\\s+(.+)$', 'return "Gelesen: " + m[1];'),
+        ('^Editing\\s+(.+)$', 'return "Bearbeite " + m[1];'),
+        ('^Edited\\s+(.+)$', 'return "Bearbeitet: " + m[1];'),
+        ('^Running\\s+(.+)$', 'return "Führe aus: " + m[1];'),
+        ('^Ran\\s+(.+)$', 'return "Ausgeführt: " + m[1];'),
+        ('^Executing\\s+(.+)$', 'return "Führe aus: " + m[1];'),
+        ('^Executed\\s+(.+)$', 'return "Ausgeführt: " + m[1];'),
+        ('^Creating\\s+(.+)$', 'return "Erstelle " + m[1];'),
+        ('^Created\\s+(.+)$', 'return "Erstellt: " + m[1];'),
+        ('^Deleting\\s+(.+)$', 'return "Lösche " + m[1];'),
+        ('^Deleted\\s+(.+)$', 'return "Gelöscht: " + m[1];'),
+        ('^Analyzing\\s+(.+)$', 'return "Analysiere " + m[1];'),
+        ('^Analyzed\\s+(.+)$', 'return "Analysiert: " + m[1];'),
+        ('^Thought for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "Gedacht für " + m[1] + " Sek." + m[2];'),
+        ('^Thought for\\s+([\\d.]+)\\s*(?:m|minutes?)(.*)$', 'return "Gedacht für " + m[1] + " Min." + m[2];'),
+        ('^Thinking for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "Denkt seit " + m[1] + " Sek." + m[2];'),
+        ('^Step\\s+(\\d+)\\s+of\\s+(\\d+)$', 'return "Schritt " + m[1] + " von " + m[2];'),
+        ('^([0-9]+)\\s*lines?\\s*added$', 'return "Zeilen hinzugefügt: " + m[1];'),
+        ('^([0-9]+)\\s*lines?\\s*removed$', 'return "Zeilen entfernt: " + m[1];'),
+        ('^([0-9]+)\\s*lines?\\s*changed$', 'return "Zeilen geändert: " + m[1];'),
+        ('^([0-9]+)\\s*files?\\s*changed$', 'return "Geänderte Dateien: " + m[1];'),
+        ('^([0-9]+)\\s*files?\\s*created$', 'return "Erstellte Dateien: " + m[1];'),
+        ('^([0-9]+)\\s*files?\\s*deleted$', 'return "Gelöschte Dateien: " + m[1];'),
+        ('^([0-9]+)\\s+agents?\\s+running$', 'return "Aktive Agenten: " + m[1];'),
+        ('^([0-9]+)\\s+of\\s+([0-9]+)$', 'return m[1] + " von " + m[2];'),
+        ('^([0-9]+)\\s+items?$', 'return m[1] + " Elemente";'),
+    ],
+    "fr": [
+        ('^Searching for\\s+(.+)$', 'return "Recherche de " + m[1];'),
+        ('^Searched for\\s+(.+)$', 'return "Recherche terminée : " + m[1];'),
+        ('^Reading\\s+(.+)$', 'return "Lecture de " + m[1];'),
+        ('^Read\\s+(.+)$', 'return "Lu : " + m[1];'),
+        ('^Editing\\s+(.+)$', 'return "Modification de " + m[1];'),
+        ('^Edited\\s+(.+)$', 'return "Modifié : " + m[1];'),
+        ('^Running\\s+(.+)$', 'return "Exécution de " + m[1];'),
+        ('^Ran\\s+(.+)$', 'return "Exécuté : " + m[1];'),
+        ('^Executing\\s+(.+)$', 'return "Exécution de " + m[1];'),
+        ('^Executed\\s+(.+)$', 'return "Exécuté : " + m[1];'),
+        ('^Creating\\s+(.+)$', 'return "Création de " + m[1];'),
+        ('^Created\\s+(.+)$', 'return "Créé : " + m[1];'),
+        ('^Deleting\\s+(.+)$', 'return "Suppression de " + m[1];'),
+        ('^Deleted\\s+(.+)$', 'return "Supprimé : " + m[1];'),
+        ('^Analyzing\\s+(.+)$', 'return "Analyse de " + m[1];'),
+        ('^Analyzed\\s+(.+)$', 'return "Analysé : " + m[1];'),
+        ('^Thought for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "Réfléchi pendant " + m[1] + " s" + m[2];'),
+        ('^Thought for\\s+([\\d.]+)\\s*(?:m|minutes?)(.*)$', 'return "Réfléchi pendant " + m[1] + " min" + m[2];'),
+        ('^Thinking for\\s+([\\d.]+)\\s*(?:s|seconds?)(.*)$', 'return "Réfléchit pendant " + m[1] + " s" + m[2];'),
+        ('^Step\\s+(\\d+)\\s+of\\s+(\\d+)$', 'return "Étape " + m[1] + " sur " + m[2];'),
+        ('^([0-9]+)\\s*lines?\\s*added$', 'return "Lignes ajoutées : " + m[1];'),
+        ('^([0-9]+)\\s*lines?\\s*removed$', 'return "Lignes supprimées : " + m[1];'),
+        ('^([0-9]+)\\s*lines?\\s*changed$', 'return "Lignes modifiées : " + m[1];'),
+        ('^([0-9]+)\\s*files?\\s*changed$', 'return "Fichiers modifiés : " + m[1];'),
+        ('^([0-9]+)\\s*files?\\s*created$', 'return "Fichiers créés : " + m[1];'),
+        ('^([0-9]+)\\s*files?\\s*deleted$', 'return "Fichiers supprimés : " + m[1];'),
+        ('^([0-9]+)\\s+agents?\\s+running$', 'return "Agents actifs : " + m[1];'),
+        ('^([0-9]+)\\s+of\\s+([0-9]+)$', 'return m[1] + " sur " + m[2];'),
+        ('^([0-9]+)\\s+items?$', 'return m[1] + " éléments";'),
     ],
 }
 
@@ -139,15 +324,19 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
     let el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
     while (el) {{
       if (IGNORE_TAGS.has(el.tagName)) return true;
-      if (
-        el.classList &&
-        (el.classList.contains('token') ||
-         el.classList.contains('prism') ||
-         el.classList.contains('monaco-editor') ||
-         el.classList.contains('cm-editor') ||
-         el.classList.contains('xterm'))
-      ) {{
-        return true;
+      if (el.classList) {{
+        if (
+          el.classList.contains('token') ||
+          el.classList.contains('prism') ||
+          el.classList.contains('monaco-editor') ||
+          el.classList.contains('cm-editor') ||
+          el.classList.contains('xterm') ||
+          el.classList.contains('ag-thought-toolbar') ||
+          el.classList.contains('ag-thought-overlay') ||
+          el.classList.contains('notranslate')
+        ) {{
+          return true;
+        }}
       }}
       if (el.getAttribute && el.getAttribute('data-notranslate') !== null) {{
         return true;
@@ -165,6 +354,12 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
     const startSpace = text.match(/^\\s*/)[0];
     const endSpace = text.match(/\\s*$/)[0];
 
+    // 1. Direct dictionary lookup
+    if (DICT[trimmed]) {{
+      return startSpace + DICT[trimmed] + endSpace;
+    }}
+
+    // 2. Dynamic regex rules
     for (let i = 0; i < RULES.length; i++) {{
       const match = trimmed.match(RULES[i].regex);
       if (match) {{
@@ -172,8 +367,13 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
       }}
     }}
 
-    if (DICT[trimmed]) {{
-      return startSpace + DICT[trimmed] + endSpace;
+    // 3. Prefix matching: "Prefix: Value"
+    const pfxMatch = trimmed.match(/^([A-Za-z0-9 ]+:)\\s*(.+)$/);
+    if (pfxMatch && DICT[pfxMatch[1]]) {{
+      const pfxTrans = DICT[pfxMatch[1]];
+      const val = pfxMatch[2].trim();
+      const valTrans = DICT[val] || val;
+      return startSpace + pfxTrans + ' ' + valTrans + endSpace;
     }}
 
     return null;
@@ -335,6 +535,7 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
     }}
 
     function processThinkingBlock(triggerEl) {{
+      if (typeof window !== 'undefined' && window.__ag_renderThought) return;
       if (!triggerEl || triggerEl.dataset.hasTranslateControls) return;
       triggerEl.dataset.hasTranslateControls = 'true';
 
@@ -344,7 +545,7 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
 
       var toolbar = document.createElement('span');
       toolbar.className = 'ag-thought-toolbar';
-      toolbar.style.cssText = 'display:inline-flex; align-items:center; gap:6px; margin-left:10px; font-size:11px; font-family:sans-serif; vertical-align:middle; z-index:10;';
+      toolbar.style.cssText = 'display:inline-flex !important; flex-direction:row !important; align-items:center !important; flex-wrap:nowrap !important; white-space:nowrap !important; gap:6px !important; margin-left:10px !important; font-size:11px !important; font-family:sans-serif !important; vertical-align:middle !important; z-index:10 !important; flex-shrink:0 !important;';
 
       // 1. Target Lang / EN Button
       var btnTranslate = document.createElement('button');
@@ -352,7 +553,7 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
       btnTranslate.className = 'ag-btn-lang';
       btnTranslate.innerText = BUTTON_LABEL;
       btnTranslate.title = BUTTON_TITLE;
-      btnTranslate.style.cssText = 'padding:1px 6px; border-radius:4px; border:1px solid rgba(128,128,128,0.3); background:rgba(128,128,128,0.1); cursor:pointer; font-size:11px; color:inherit; font-weight:bold;';
+      btnTranslate.style.cssText = 'display:inline-flex !important; flex-direction:row !important; align-items:center !important; white-space:nowrap !important; flex-shrink:0 !important; height:20px !important; line-height:18px !important; padding:1px 6px !important; border-radius:4px !important; border:1px solid rgba(128,128,128,0.3) !important; background:rgba(128,128,128,0.1) !important; cursor:pointer !important; font-size:11px !important; color:inherit !important; font-weight:bold !important;';
 
       // 2. Auto toggle
       var btnAuto = document.createElement('button');
@@ -362,13 +563,21 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
       function updateAutoBtn() {{
         var auto = isAutoTranslate();
         btnAuto.innerText = auto ? AUTO_LABEL_ON : AUTO_LABEL_OFF;
-        btnAuto.style.cssText = 'padding:1px 6px; border-radius:4px; border:1px solid ' + (auto ? '#22c55e' : 'rgba(128,128,128,0.3)') + '; background:' + (auto ? 'rgba(34,197,94,0.15)' : 'rgba(128,128,128,0.1)') + '; color:' + (auto ? '#16a34a' : 'inherit') + '; cursor:pointer; font-size:11px;';
+        btnAuto.style.cssText = 'display:inline-flex !important; flex-direction:row !important; align-items:center !important; white-space:nowrap !important; flex-shrink:0 !important; height:20px !important; line-height:18px !important; padding:1px 6px !important; border-radius:4px !important; border:1px solid ' + (auto ? '#22c55e' : 'rgba(128,128,128,0.3)') + ' !important; background:' + (auto ? 'rgba(34,197,94,0.15)' : 'rgba(128,128,128,0.1)') + ' !important; color:' + (auto ? '#16a34a' : 'inherit') + ' !important; cursor:pointer !important; font-size:11px !important;';
         btnAuto.title = AUTO_TITLE;
       }}
       updateAutoBtn();
 
-      btnAuto.onclick = function (e) {{
+      function stopEvt(e) {{
+        if (!e) return;
         e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') {{
+          e.stopImmediatePropagation();
+        }}
+      }}
+
+      btnAuto.addEventListener('click', function (e) {{
+        stopEvt(e);
         setAutoTranslate(!isAutoTranslate());
         var allBtns = document.querySelectorAll('.ag-btn-auto');
         for (var i = 0; i < allBtns.length; i++) {{
@@ -381,23 +590,61 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
         if (isAutoTranslate()) {{
           doTranslate();
         }}
-      }};
+      }});
+      btnAuto.addEventListener('mousedown', stopEvt);
+      btnAuto.addEventListener('pointerdown', stopEvt);
 
       var isTranslated = false;
-      var originalText = null;
+
+      function findContentEl() {{
+        var candidates = [
+          parentContainer.querySelector('[data-testid="thinking-collapsible-content"]'),
+          parentContainer.querySelector('.markdown-body'),
+          parentContainer.querySelector('.rendered-markdown'),
+          parentContainer.querySelector('.cursor-edit'),
+          parentContainer.querySelector('pre')
+        ];
+        for (var c = 0; c < candidates.length; c++) {{
+          var el = candidates[c];
+          if (el && el !== triggerEl && !el.contains(triggerEl) && !triggerEl.contains(el)) {{
+            return el;
+          }}
+        }}
+        var sib = triggerEl.nextElementSibling;
+        while (sib) {{
+          if (sib !== toolbar && !sib.contains(toolbar)) return sib;
+          sib = sib.nextElementSibling;
+        }}
+        return null;
+      }}
 
       async function doTranslate() {{
-        var contentEl = parentContainer.querySelector('.cursor-edit') || parentContainer.querySelector('pre') || parentContainer;
+        var contentEl = findContentEl();
         if (!contentEl) return;
 
-        if (!originalText) {{
-          originalText = contentEl.innerText;
-        }}
+        var currentText = contentEl.innerText || contentEl.textContent || '';
+        if (!currentText.trim()) return;
 
         btnTranslate.innerText = '⏳ ...';
-        var tr = await translateText(originalText);
-        if (tr && tr !== originalText) {{
-          contentEl.innerText = tr;
+        var tr = await translateText(currentText);
+        if (tr && tr !== currentText) {{
+          var holder = contentEl.querySelector('.ag-thought-overlay');
+          if (!holder) {{
+            holder = document.createElement('div');
+            holder.className = 'ag-thought-overlay';
+            holder.style.cssText = 'white-space:pre-wrap !important; line-height:1.5 !important; font-family:inherit !important; padding:4px 0 !important;';
+            contentEl.appendChild(holder);
+          }}
+          holder.innerText = tr;
+          holder.style.display = 'block';
+
+          for (var i = 0; i < contentEl.children.length; i++) {{
+            var ch = contentEl.children[i];
+            if (ch !== holder) {{
+              ch.style.display = 'none';
+            }}
+          }}
+
           isTranslated = true;
           btnTranslate.innerText = ORIG_BUTTON;
           btnTranslate.title = ORIG_TITLE;
@@ -409,9 +656,18 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
       }}
 
       function doShowEnglish() {{
-        var contentEl = parentContainer.querySelector('.cursor-edit') || parentContainer.querySelector('pre') || parentContainer;
-        if (contentEl && originalText) {{
-          contentEl.innerText = originalText;
+        var contentEl = findContentEl();
+        if (contentEl) {{
+          var holder = contentEl.querySelector('.ag-thought-overlay');
+          if (holder) {{
+            holder.style.display = 'none';
+          }}
+          for (var i = 0; i < contentEl.children.length; i++) {{
+            var ch = contentEl.children[i];
+            if (ch !== holder) {{
+              ch.style.display = '';
+            }}
+          }}
           isTranslated = false;
           btnTranslate.innerText = BUTTON_LABEL;
           btnTranslate.title = BUTTON_TITLE;
@@ -420,14 +676,16 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
         }}
       }}
 
-      btnTranslate.onclick = function (e) {{
-        e.stopPropagation();
+      btnTranslate.addEventListener('click', function (e) {{
+        stopEvt(e);
         if (isTranslated) {{
           doShowEnglish();
         }} else {{
           doTranslate();
         }}
-      }};
+      }});
+      btnTranslate.addEventListener('mousedown', stopEvt);
+      btnTranslate.addEventListener('pointerdown', stopEvt);
 
       toolbar.appendChild(btnTranslate);
       toolbar.appendChild(btnAuto);
@@ -439,6 +697,7 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
     }}
 
     function scanForThinkingBlocks() {{
+      if (typeof window !== 'undefined' && window.__ag_renderThought) return;
       var triggers = document.querySelectorAll('[data-testid="thinking-collapsible-trigger"]');
       for (var i = 0; i < triggers.length; i++) {{
         processThinkingBlock(triggers[i]);
