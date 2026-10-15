@@ -25,6 +25,18 @@ import time
 import zipfile
 from pathlib import Path
 
+# Attach console on Windows if launched from terminal in noconsole mode
+if sys.platform == "win32":
+    try:
+        import ctypes
+        if ctypes.windll.kernel32.AttachConsole(-1):
+            if sys.stdout is None or getattr(sys.stdout, "closed", False):
+                sys.stdout = open("CONOUT$", "w", encoding="utf-8", errors="replace")
+            if sys.stderr is None or getattr(sys.stderr, "closed", False):
+                sys.stderr = open("CONOUT$", "w", encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 # Configure utf-8 stdout where possible
 if hasattr(sys.stdout, "reconfigure"):
     try:
@@ -49,6 +61,7 @@ NLS_RU_FILE = ASSETS_DIR / "nls.messages.ru.json"
 
 APP_NAME = "Dagami Antigravity Language Pack"
 APP_VERSION = "1.1.0"
+__version__ = APP_VERSION
 TELEGRAM_URL = "https://t.me/+8qU7020rMF84OWNi"
 DONATION_URL = "https://pay.cloudtips.ru/p/671fda86"
 
@@ -56,6 +69,28 @@ BACKUP_SUFFIX = ".bak.original"
 ASAR_BACKUP_NAME = "app.asar.original_backup"
 CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
 PRELOAD_MARKER = dtb.PRELOAD_MARKER
+
+
+def verify_bundle_integrity(bundle_dir: Path = None) -> tuple[bool, list[str]]:
+    """Проверяет наличие и целостность обязательных компонентов языковых пакетов."""
+    target_dir = bundle_dir or BUNDLE_DIR
+    issues = []
+    required_files = [
+        target_dir / "translations" / "languages" / "ru" / "dict.json",
+        target_dir / "translations" / "languages" / "ru" / "metadata.json",
+        target_dir / "translations" / "languages" / "zh" / "dict.json",
+        target_dir / "translations" / "languages" / "es" / "dict.json",
+        target_dir / "assets" / "ru_pack.zip",
+        target_dir / "assets" / "nls.messages.ru.json",
+        target_dir / "resources" / "web_bundle_ru" / "main.js",
+        target_dir / "resources" / "web_bundle_ru" / "i18n-ru.js",
+    ]
+    for f in required_files:
+        if not f.exists():
+            issues.append(f"Отсутствует обязательный ресурс: {f.name} ({f})")
+        elif f.stat().st_size == 0:
+            issues.append(f"Файл ресурса пуст: {f.name}")
+    return (len(issues) == 0, issues)
 
 
 def safe_print(*args, **kwargs):
@@ -136,61 +171,216 @@ def kill_antigravity_processes(log_fn=safe_print, force=False, no_kill=False):
 
     log_fn("\n[Процессы] Завершение всех активных процессов Antigravity...")
     killed_any = False
-    for proc in ANTIGRAVITY_PROCESS_NAMES:
-        try:
-            res = subprocess.run(
-                ["taskkill", "/F", "/T", "/IM", proc],
-                capture_output=True,
-                text=True,
-                creationflags=CREATE_NO_WINDOW,
-            )
-            if res.returncode == 0:
-                log_fn(f"  Принудительно закрыт процесс: {proc}")
-                killed_any = True
-        except Exception:
-            pass
 
-    if killed_any:
-        log_fn("  Ожидание выгрузки процессов из памяти...")
-        deadline = time.time() + 5.0
-        while time.time() < deadline:
+    if sys.platform == "win32":
+        for proc in ANTIGRAVITY_PROCESS_NAMES:
             try:
-                chk = subprocess.run(
-                    ["tasklist"],
+                res = subprocess.run(
+                    ["taskkill", "/F", "/T", "/IM", proc],
                     capture_output=True,
                     text=True,
                     creationflags=CREATE_NO_WINDOW,
                 )
-                still_running = any(proc.lower() in chk.stdout.lower() for proc in ANTIGRAVITY_PROCESS_NAMES)
-                if not still_running:
-                    break
+                if res.returncode == 0:
+                    log_fn(f"  Принудительно закрыт процесс: {proc}")
+                    killed_any = True
             except Exception:
-                break
-            time.sleep(0.3)
-        log_fn("  Процессы Antigravity успешно выгружены.")
+                pass
+
+        if killed_any:
+            log_fn("  Ожидание выгрузки процессов из памяти...")
+            deadline = time.time() + 5.0
+            while time.time() < deadline:
+                try:
+                    chk = subprocess.run(
+                        ["tasklist"],
+                        capture_output=True,
+                        text=True,
+                        creationflags=CREATE_NO_WINDOW,
+                    )
+                    still_running = any(proc.lower() in chk.stdout.lower() for proc in ANTIGRAVITY_PROCESS_NAMES)
+                    if not still_running:
+                        break
+                except Exception:
+                    break
+                time.sleep(0.3)
+            log_fn("  Процессы Antigravity успешно выгружены.")
+        else:
+            log_fn("  Активных процессов не обнаружено.")
     else:
-        log_fn("  Активных процессов не обнаружено.")
+        # Linux & macOS process termination
+        proc_patterns = [
+            "antigravity",
+            "Antigravity",
+            "antigravity-ide",
+            "Antigravity IDE",
+            "language_server",
+        ]
+        for pattern in proc_patterns:
+            try:
+                res = subprocess.run(["pkill", "-9", "-f", pattern], capture_output=True)
+                if res.returncode == 0:
+                    log_fn(f"  Принудительно закрыт процесс: {pattern}")
+                    killed_any = True
+            except Exception:
+                pass
+
+        if killed_any:
+            time.sleep(0.5)
+            log_fn("  Процессы Antigravity успешно выгружены.")
+        else:
+            log_fn("  Активных процессов не обнаружено.")
 
 
 # =============================================================================
-# Path Detection & Validation
+# Path Detection & Validation (Cross-Platform: Windows, Linux, macOS)
 # =============================================================================
+
+def resolve_desktop_path(path: Path) -> Path:
+    if not path:
+        return path
+    if path.suffix == ".app" and (path / "Contents").exists():
+        return path / "Contents"
+    return path
+
+
+def get_desktop_asar_path(desktop_path: Path) -> Path:
+    dp = resolve_desktop_path(desktop_path)
+    candidates = [
+        dp / "resources" / "app.asar",
+        dp / "Resources" / "app.asar",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return dp / "resources" / "app.asar"
+
+
+def resolve_ide_path(path: Path) -> Path:
+    if not path:
+        return path
+    if path.suffix == ".app" and (path / "Contents").exists():
+        return path / "Contents"
+    return path
+
+
+def get_ide_ext_base(ide_path: Path) -> Path:
+    ip = resolve_ide_path(ide_path)
+    candidates = [
+        ip / "resources" / "app" / "extensions" / "antigravity",
+        ip / "Resources" / "app" / "extensions" / "antigravity",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return ip / "resources" / "app" / "extensions" / "antigravity"
+
+
+def get_ide_out_dir(ide_path: Path) -> Path:
+    ip = resolve_ide_path(ide_path)
+    candidates = [
+        ip / "resources" / "app" / "out",
+        ip / "Resources" / "app" / "out",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return ip / "resources" / "app" / "out"
+
+
+def validate_ide_path(path: Path) -> bool:
+    if not path or not path.exists():
+        return False
+    pkg = get_ide_ext_base(path) / "package.json"
+    p = resolve_ide_path(path)
+    exe_candidates = [
+        p / "Antigravity IDE.exe",
+        p / "antigravity-ide.exe",
+        p / "Antigravity.exe",
+        p / "antigravity-ide",
+        p / "Antigravity IDE",
+        p / "MacOS" / "Antigravity IDE",
+    ]
+    return pkg.exists() or any(e.exists() for e in exe_candidates)
+
+
+def validate_desktop_path(path: Path) -> bool:
+    if not path or not path.exists():
+        return False
+    asar = get_desktop_asar_path(path)
+    p = resolve_desktop_path(path)
+    exe_candidates = [
+        p / "Antigravity.exe",
+        p / "antigravity.exe",
+        p / "antigravity",
+        p / "Antigravity",
+        p / "MacOS" / "Antigravity",
+        p / "MacOS" / "Google Antigravity",
+    ]
+    return asar.exists() or any(e.exists() for e in exe_candidates)
+
 
 def get_default_paths():
-    local_app_data = Path(os.environ.get("LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local")))
-    prog_files = Path(os.environ.get("ProgramFiles", "C:\\Program Files"))
-    user_home = Path(os.path.expanduser("~"))
+    user_home = Path.home()
+    ide_candidates = []
+    desktop_candidates = []
+    ide_user_data = user_home / ".antigravity-ide"
 
-    ide_candidates = [
-        local_app_data / "Programs" / "Antigravity IDE",
-        prog_files / "Antigravity IDE",
-        local_app_data / "Programs" / "antigravity-ide",
-    ]
-    desktop_candidates = [
-        local_app_data / "Programs" / "antigravity",
-        prog_files / "antigravity",
-        local_app_data / "Programs" / "Antigravity",
-    ]
+    if sys.platform == "win32":
+        local_app_data = Path(os.environ.get("LOCALAPPDATA", user_home / "AppData" / "Local"))
+        prog_files = Path(os.environ.get("ProgramFiles", "C:\\Program Files"))
+        ide_candidates = [
+            local_app_data / "Programs" / "Antigravity IDE",
+            prog_files / "Antigravity IDE",
+            local_app_data / "Programs" / "antigravity-ide",
+        ]
+        desktop_candidates = [
+            local_app_data / "Programs" / "antigravity",
+            prog_files / "antigravity",
+            local_app_data / "Programs" / "Antigravity",
+        ]
+    elif sys.platform == "darwin":  # macOS
+        desktop_candidates = [
+            Path("/Applications/Google Antigravity.app/Contents"),
+            Path("/Applications/Antigravity.app/Contents"),
+            user_home / "Applications" / "Google Antigravity.app" / "Contents",
+            user_home / "Applications" / "Antigravity.app" / "Contents",
+            Path("/Applications/Google Antigravity.app"),
+            Path("/Applications/Antigravity.app"),
+        ]
+        ide_candidates = [
+            Path("/Applications/Google Antigravity IDE.app/Contents"),
+            Path("/Applications/Antigravity IDE.app/Contents"),
+            user_home / "Applications" / "Google Antigravity IDE.app" / "Contents",
+            user_home / "Applications" / "Antigravity IDE.app" / "Contents",
+            Path("/Applications/Google Antigravity IDE.app"),
+            Path("/Applications/Antigravity IDE.app"),
+        ]
+        mac_support_dir = user_home / "Library" / "Application Support" / "Antigravity IDE"
+        if mac_support_dir.exists():
+            ide_user_data = mac_support_dir
+    else:  # Linux
+        desktop_candidates = [
+            Path("/opt/Google/Antigravity"),
+            Path("/opt/antigravity"),
+            Path("/opt/Google/antigravity"),
+            Path("/usr/lib/antigravity"),
+            Path("/usr/share/antigravity"),
+            user_home / ".local" / "share" / "Google" / "Antigravity",
+            user_home / ".local" / "share" / "antigravity",
+            user_home / ".local" / "share" / "programs" / "antigravity",
+        ]
+        ide_candidates = [
+            Path("/opt/Google/Antigravity IDE"),
+            Path("/opt/antigravity-ide"),
+            Path("/usr/lib/antigravity-ide"),
+            Path("/usr/share/antigravity-ide"),
+            user_home / ".local" / "share" / "antigravity-ide",
+            user_home / ".local" / "share" / "programs" / "antigravity-ide",
+        ]
+        linux_config_dir = user_home / ".config" / "Antigravity IDE"
+        if linux_config_dir.exists():
+            ide_user_data = linux_config_dir
 
     detected_ide = None
     for p in ide_candidates:
@@ -204,30 +394,11 @@ def get_default_paths():
             detected_desktop = p
             break
 
-    ide_user_data = user_home / ".antigravity-ide"
-
     return {
         "ide_path": detected_ide,
         "desktop_path": detected_desktop,
         "ide_user_data": ide_user_data,
     }
-
-
-def validate_ide_path(path: Path) -> bool:
-    if not path or not path.exists():
-        return False
-    pkg = path / "resources" / "app" / "extensions" / "antigravity" / "package.json"
-    exe1 = path / "Antigravity IDE.exe"
-    exe2 = path / "Antigravity.exe"
-    return pkg.exists() or exe1.exists() or exe2.exists()
-
-
-def validate_desktop_path(path: Path) -> bool:
-    if not path or not path.exists():
-        return False
-    asar = path / "resources" / "app.asar"
-    exe = path / "Antigravity.exe"
-    return asar.exists() or exe.exists()
 
 
 # =============================================================================
@@ -1111,6 +1282,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"Сообщество: {TELEGRAM_URL}\nПоддержать проект: {DONATION_URL}",
     )
+    parser.add_argument("--version", "-v", action="version", version=f"{APP_NAME} v{APP_VERSION}")
+    parser.add_argument("--verify-bundle", action="store_true", help="Проверить целостность бандла ресурсов")
     parser.add_argument("--lang", type=str, help="Установить указанный язык (ru, zh, es, ja, de, fr...)")
     parser.add_argument("--list", action="store_true", help="Показать доступные языки")
     parser.add_argument("--update", action="store_true", help="Обновить языковые пакеты")
@@ -1127,6 +1300,17 @@ def main():
     parser.add_argument("--install", action="store_true", help=argparse.SUPPRESS)
 
     args = parser.parse_args()
+
+    if args.verify_bundle:
+        ok, issues = verify_bundle_integrity()
+        if ok:
+            safe_print("[+] Целостность бандла ресурсов подтверждена.")
+            sys.exit(0)
+        else:
+            safe_print("[-] Обнаружены проблемы целостности:")
+            for issue in issues:
+                safe_print(f"  - {issue}")
+            sys.exit(1)
 
     default_paths = get_default_paths()
     ide_p = Path(args.ide_path) if args.ide_path else default_paths["ide_path"]

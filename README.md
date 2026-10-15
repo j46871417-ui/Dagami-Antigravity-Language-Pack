@@ -96,14 +96,31 @@ Dagami Antigravity Language Pack полностью совместим с **Anti
 
 ---
 
+## 💻 Кроссплатформенная поддержка и релизы
+
+Пакет полностью поддерживает **Windows**, **Linux** и **macOS**!
+
+| Платформа | Формат загрузки | Запуск / Установка |
+| :--- | :--- | :--- |
+| **Windows** | [`.exe` / `.zip`](https://github.com/j46871417-ui/Antigravity-Localizer/releases) | Запустить `AntigravityLocalizer.exe` или `dagami-ag-localizer.cmd --lang ru` |
+| **Linux** | [`.tar.gz`](https://github.com/j46871417-ui/Antigravity-Localizer/releases) | `./install.sh --lang ru` или `./dagami-ag-localizer.sh --lang ru` |
+| **macOS** | [`.zip`](https://github.com/j46871417-ui/Antigravity-Localizer/releases) | `./install.sh --lang ru` или `./dagami-ag-localizer.sh --lang ru` |
+
+📖 Подробное пошаговое руководство со скриншотами и командами доступно в файле [**INSTRUCTIONS.md**](INSTRUCTIONS.md).
+
+---
+
 ## 📁 Структура проекта
 
 ```
-├── dagami_ag_localizer.py      # Основной модуль и точка входа Dagami Language Pack
+├── dagami_ag_localizer.py      # Основной кроссплатформенный модуль и точка входа
 ├── dagami_translator_builder.py# Генератор мультиязычного JS-рантайма
 ├── dagami-ag-localizer.cmd     # Консольный лаунчер для Windows (CMD / PowerShell)
+├── dagami-ag-localizer.sh      # Консольный лаунчер для Linux и macOS (Bash)
 ├── install.ps1                 # Сценарий быстрой установки в PowerShell
 ├── install.bat                 # Пакетный лаунчер Windows
+├── install.sh                  # Универсальный установщик Linux и macOS
+├── INSTRUCTIONS.md             # Подробная инструкция для Windows, Linux и macOS
 ├── translations/
 │   └── languages/              # Модульные языковые пакеты
 │       ├── ru/                 # Русский языковой пакет (словарь, меню, настройки)

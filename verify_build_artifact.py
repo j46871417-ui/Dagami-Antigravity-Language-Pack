@@ -35,7 +35,7 @@ if sys.platform == "win32":
 REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from antigravity_localizer import verify_bundle_integrity, __version__ as PY_VERSION
+from dagami_ag_localizer import verify_bundle_integrity, __version__ as PY_VERSION
 
 
 def check_source_bundle(bundle_dir: Path) -> list[str]:
