@@ -14,7 +14,7 @@ import urllib.request
 import urllib.error
 
 REPO_OWNER = "j46871417-ui"
-REPO_NAME = "Antigravity-Localizer"
+REPO_NAME = "Dagami-Antigravity-Language-Pack"
 TAG_NAME = "v1.1.0"
 RELEASE_NAME = "Dagami Antigravity Language Pack v1.1.0 (Windows, Linux, macOS)"
 
