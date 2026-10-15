@@ -1,0 +1,16 @@
+{
+  "code": "ja",
+  "name": "Japanese",
+  "nativeName": "日本語",
+  "version": "1.0.0",
+  "translatorTarget": "ja",
+  "flag": "🇯🇵",
+  "buttonLabel": "🌐 JA",
+  "buttonTitle": "思考プロセスを日本語に翻訳",
+  "autoLabelOn": "⚡ 自動: ON",
+  "autoLabelOff": "⚡ 自動: OFF",
+  "autoTitle": "思考プロセスの自動翻訳",
+  "originalButton": "🌐 EN",
+  "originalTitle": "オリジナルの英語を表示",
+  "vscodeLocale": "ja"
+}

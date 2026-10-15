@@ -1,0 +1,22 @@
+{
+  "menu": {
+    "New Window": "新しいウィンドウ",
+    "Docs": "ドキュメント",
+    "Check for Updates": "アップデートを確認",
+    "Connect to WSL": "WSLに接続",
+    "Reopen Locally": "ローカルで再度開く"
+  },
+  "tray": {
+    "No agents running": "実行中のエージェントはありません",
+    "agent running": "件のエージェントが実行中",
+    "agents running": "件のエージェントが実行中",
+    "Quit": "終了"
+  },
+  "wizard": {
+    "Welcome to Antigravity": "Antigravityへようこそ",
+    "Setting up…": "設定中…",
+    "Welcome to the new Antigravity!": "新しいAntigravityへようこそ！",
+    "Download the Antigravity IDE": "Antigravity IDEをダウンロード",
+    "Explore the new Antigravity": "新しいAntigravityを体験"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "commands": {
+    "antigravity.startAgent": {
+      "zh": "运行中的智能体"
+    },
+    "antigravity.openSettings": {
+      "zh": "打开设置"
+    }
+  }
+}

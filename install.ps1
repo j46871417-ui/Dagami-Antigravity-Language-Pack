@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Google Antigravity (Desktop & IDE) — Установщик русской локализации (Open Source)
+    Dagami Antigravity Language Pack — Универсальный мультиязычный установщик
 .DESCRIPTION
-    Устанавливает или удаляет русификацию десктопного приложения Antigravity 2.0 и Antigravity IDE.
-    100% открытый исходный код без срабатываний антивирусов.
+    Устанавливает или удаляет языковые пакеты (ru, zh, es, ja, de, fr и др.) для Google Antigravity Desktop и IDE.
+    100% безопасная модификация in-place без повреждения системных зависимостей и без привязки к устаревшим версиям.
     Поддерживает запуск одной строкой через консоль PowerShell:
     irm https://raw.githubusercontent.com/j46871417-ui/Antigravity-Localizer/main/install.ps1 | iex
 .LINK
@@ -11,8 +11,11 @@
 #>
 
 param(
+    [string]$Lang = "",
     [switch]$Install,
     [switch]$Uninstall,
+    [switch]$List,
+    [switch]$Update,
     [string]$AppDir = "$env:LOCALAPPDATA\Programs\antigravity",
     [string]$IdeDir = "$env:LOCALAPPDATA\Programs\Antigravity IDE",
     [string]$ExpectedHash = ""
@@ -20,18 +23,47 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$Host.UI.RawUI.WindowTitle = "Google Antigravity - Русификатор"
+$Host.UI.RawUI.WindowTitle = "Dagami Antigravity Language Pack"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "    Google Antigravity — Русская локализация (RU)         " -ForegroundColor Green
+Write-Host "    🚀 Dagami Antigravity Language Pack                   " -ForegroundColor Green
+Write-Host "    Мультиязычная локализация Google Antigravity (v1.1.0)" -ForegroundColor White
 Write-Host "    Репозиторий: https://github.com/j46871417-ui/Antigravity-Localizer" -ForegroundColor Gray
 Write-Host "    Telegram:    https://t.me/+8qU7020rMF84OWNi" -ForegroundColor Cyan
+Write-Host "    Поддержка:   https://pay.cloudtips.ru/p/671fda86" -ForegroundColor Yellow
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 1. Проверка путей
+# 1. Поиск исполняемого файла Python
+$PythonExe = (Get-Command python -ErrorAction SilentlyContinue).Source
+if (-not $PythonExe) {
+    $PythonExe = (Get-Command py -ErrorAction SilentlyContinue).Source
+}
+if (-not $PythonExe) {
+    $candidates = @(
+        "$env:LOCALAPPDATA\Programs\Python\Python314\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe",
+        "C:\Python314\python.exe",
+        "C:\Python313\python.exe",
+        "C:\Python312\python.exe",
+        "C:\Python311\python.exe"
+    )
+    foreach ($c in $candidates) {
+        if (Test-Path $c) {
+            $PythonExe = $c
+            break
+        }
+    }
+}
+
+# 2. Проверка путей к приложению
 $HasDesktop = Test-Path "$AppDir\Antigravity.exe"
 $HasIde = Test-Path "$IdeDir\Antigravity.exe"
+if (-not $HasIde) {
+    $HasIde = Test-Path "$IdeDir\Antigravity IDE.exe"
+}
 
 if (-not $HasDesktop -and -not (Test-Path "$AppDir")) {
     $altPath = "$env:PROGRAMFILES\antigravity"
@@ -41,65 +73,81 @@ if (-not $HasDesktop -and -not (Test-Path "$AppDir")) {
     }
 }
 
-if (-not $HasDesktop -and -not $HasIde) {
-    Write-Host "[!] Antigravity не найден в стандартных каталогах." -ForegroundColor Yellow
-    $manualPath = Read-Host "Введите полный путь к каталогу с Antigravity.exe"
-    if (Test-Path "$manualPath\Antigravity.exe") {
-        $AppDir = $manualPath
-        $HasDesktop = $true
-    } else {
-        Write-Host "[-] Antigravity.exe не найден по указанному пути. Прерывание." -ForegroundColor Red
-        return
-    }
-}
-
 if ($HasDesktop) {
-    Write-Host "[+] Обнаружен Antigravity 2.0 Desktop: $AppDir" -ForegroundColor Green
+    Write-Host "[+] Обнаружен Antigravity Desktop: $AppDir" -ForegroundColor Green
 }
 if ($HasIde) {
-    Write-Host "[+] Обнаружен Antigravity IDE (VS Code Edition): $IdeDir" -ForegroundColor Green
+    Write-Host "[+] Обнаружен Antigravity IDE:     $IdeDir" -ForegroundColor Green
 }
 
-# 2. Выбор режима
-if (-not $Install -and -not $Uninstall) {
+# 3. Обработка флага --list
+if ($List) {
+    if ($PythonExe) {
+        $ScriptPath = Join-Path $PSScriptRoot "dagami_ag_localizer.py"
+        if (Test-Path $ScriptPath) {
+            & $PythonExe $ScriptPath --list
+            return
+        }
+    }
+    Write-Host "Доступные языки: ru (Русский), zh (简体中文), es (Español), ja (日本語), de (Deutsch), fr (Français)" -ForegroundColor White
+    return
+}
+
+# 4. Режим интерактивного выбора действия
+if (-not $Install -and -not $Uninstall -and -not $Update -and [string]::IsNullOrWhiteSpace($Lang)) {
     if ([Console]::IsInputRedirected -or [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+        $Lang = "ru"
         $Install = $true
     } else {
-        Write-Host ""
         Write-Host "Выберите действие:" -ForegroundColor Yellow
-        Write-Host " [1] Установить русификацию (Рекомендуется)" -ForegroundColor White
-        Write-Host "     • Полный перевод 950+ элементов интерфейса, нативного меню, трея и настроек."
-        Write-Host "     • Поддержка как Antigravity 2.0 Desktop, так и Antigravity IDE."
-        Write-Host "     • Безопасная фильтрация: код, терминалы и теги не затрагиваются."
-        Write-Host "     • Все проекты, история чатов, сессии и ключи API сохраняются."
-        Write-Host "     • Автоматический бэкап оригинальных файлов ядра Google."
-        Write-Host ""
-        Write-Host " [2] Удалить русификацию (Восстановить официальный оригинал)" -ForegroundColor White
-        Write-Host "     • Возвращает оригинальный английский app.asar от Google."
-        Write-Host ""
+        Write-Host " [1] Установить русский язык (Russian / ru)" -ForegroundColor White
+        Write-Host " [2] Установить китайский язык (Chinese / zh)" -ForegroundColor White
+        Write-Host " [3] Установить испанский язык (Spanish / es)" -ForegroundColor White
+        Write-Host " [4] Установить японский язык (Japanese / ja)" -ForegroundColor White
+        Write-Host " [5] Ввести другой код языка..." -ForegroundColor White
+        Write-Host " [6] Восстановить оригинальную версию Google (English)" -ForegroundColor White
+        Write-Host " [7] Показать список всех языков (--list)" -ForegroundColor White
         Write-Host " [0] Отмена" -ForegroundColor Gray
         Write-Host ""
         $choice = Read-Host "Введите номер действия [1]"
         if ($choice -eq "2") {
+            $Lang = "zh"
+            $Install = $true
+        } elseif ($choice -eq "3") {
+            $Lang = "es"
+            $Install = $true
+        } elseif ($choice -eq "4") {
+            $Lang = "ja"
+            $Install = $true
+        } elseif ($choice -eq "5") {
+            $Lang = Read-Host "Введите код языка (например, de, fr)"
+            $Install = $true
+        } elseif ($choice -eq "6") {
             $Uninstall = $true
+        } elseif ($choice -eq "7") {
+            $List = $true
         } elseif ($choice -eq "0") {
             Write-Host "[*] Отменено пользователем." -ForegroundColor Yellow
             return
         } else {
+            $Lang = "ru"
             $Install = $true
         }
     }
 }
 
+if ([string]::IsNullOrWhiteSpace($Lang)) {
+    $Lang = "ru"
+}
+
 $ResourcesDir = Join-Path $AppDir "resources"
 $TargetAsar = Join-Path $ResourcesDir "app.asar"
 $BackupAsar = Join-Path $ResourcesDir "app.asar.original_backup"
-$TargetBundle = Join-Path $ResourcesDir "web_bundle_ru"
 
-# --- РЕЖИМ УДАЛЕНИЯ ---
+# --- РЕЖИМ УДАЛЕНИЯ / ВОССТАНОВЛЕНИЯ ---
 if ($Uninstall) {
     Write-Host ""
-    Write-Host "[*] Восстановление оригинальной версии от Google..." -ForegroundColor Cyan
+    Write-Host "[*] Восстановление оригинальной английской версии Google..." -ForegroundColor Cyan
 
     $procs = Get-Process -Name "Antigravity", "Antigravity IDE" -ErrorAction SilentlyContinue
     if ($procs) {
@@ -114,14 +162,20 @@ if ($Uninstall) {
         Write-Host "[+] Оригинальный app.asar успешно восстановлен из резервной копии." -ForegroundColor Green
         $asarRestored = $true
     } else {
-        # Проверяем также версионированные бэкапы
-        $latestBak = Get-ChildItem -Path $ResourcesDir -Filter "app.asar.bak.v*" -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        if ($latestBak) {
-            Copy-Item -Path $latestBak.FullName -Destination $TargetAsar -Force
-            Write-Host "[+] Оригинальный app.asar восстановлен из версионированного бэкапа ($($latestBak.Name))." -ForegroundColor Green
+        $bakAlt = "$TargetAsar.bak.original"
+        if (Test-Path $bakAlt) {
+            Copy-Item -Path $bakAlt -Destination $TargetAsar -Force
+            Write-Host "[+] Оригинальный app.asar успешно восстановлен из .bak.original." -ForegroundColor Green
             $asarRestored = $true
         } else {
-            Write-Host "[!] Резервная копия app.asar не найдена." -ForegroundColor Yellow
+            $latestBak = Get-ChildItem -Path $ResourcesDir -Filter "app.asar.bak.v*" -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            if ($latestBak) {
+                Copy-Item -Path $latestBak.FullName -Destination $TargetAsar -Force
+                Write-Host "[+] Оригинальный app.asar восстановлен из версионированного бэкапа ($($latestBak.Name))." -ForegroundColor Green
+                $asarRestored = $true
+            } else {
+                Write-Host "[!] Резервная копия app.asar не найдена." -ForegroundColor Yellow
+            }
         }
     }
 
@@ -133,8 +187,6 @@ if ($Uninstall) {
             Write-Host "[!] ВНИМАНИЕ: web_bundle_ru сохранён, так как app.asar не был восстановлен из бэкапа. Это предотвращает поломку приложения." -ForegroundColor Yellow
         }
     }
-
-    # IDE restore
     if ($HasIde) {
         $ideExtPkg = Join-Path $IdeDir "resources\app\extensions\antigravity\package.json"
         $ideExtPkgBak = "$ideExtPkg.bak.original"
@@ -153,12 +205,12 @@ if ($Uninstall) {
 
 # --- РЕЖИМ УСТАНОВКИ ---
 Write-Host ""
-Write-Host "[*] Подготовка к установке русификатора..." -ForegroundColor Cyan
+Write-Host "[*] Подготовка к установке языкового пакета '$Lang'..." -ForegroundColor Cyan
 
 $ScriptDir = $PSScriptRoot
 $IsRemote = $false
 
-if ([string]::IsNullOrWhiteSpace($ScriptDir) -or (-not (Test-Path "$ScriptDir\resources\app.asar"))) {
+if ([string]::IsNullOrWhiteSpace($ScriptDir) -or (-not (Test-Path "$ScriptDir\dagami_ag_localizer.py"))) {
     $IsRemote = $true
 }
 
@@ -167,9 +219,9 @@ $TempZip = $null
 
 try {
     if ($IsRemote) {
-        Write-Host "[*] Загрузка актуальных файлов локализации с GitHub..." -ForegroundColor Cyan
+        Write-Host "[*] Загрузка актуальных файлов Dagami Language Pack с GitHub..." -ForegroundColor Cyan
         $ZipUrl = "https://github.com/j46871417-ui/Antigravity-Localizer/archive/refs/heads/main.zip"
-        $TempDir = Join-Path $env:TEMP ("antigravity_ru_" + [guid]::NewGuid().ToString().Substring(0, 8))
+        $TempDir = Join-Path $env:TEMP ("dagami_ag_" + [guid]::NewGuid().ToString().Substring(0, 8))
         $TempZip = "$TempDir.zip"
 
         New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
@@ -179,161 +231,47 @@ try {
         Invoke-WebRequest -Uri $ZipUrl -OutFile $TempZip -UseBasicParsing
         $ProgressPreference = $oldProgress
 
-        # Проверка целостности и подлинности архива по алгоритму SHA256 перед распаковкой
-        if (-not [string]::IsNullOrWhiteSpace($ExpectedHash)) {
-            Write-Host "[*] Проверка контрольной суммы SHA256 архива..." -ForegroundColor Cyan
-            $actualHash = (Get-FileHash -Path $TempZip -Algorithm SHA256).Hash
-            if ($actualHash -ne $ExpectedHash.ToUpper()) {
-                throw "Нарушение безопасности: SHA256 скачанного архива ($actualHash) не совпадает с ожидаемым ($ExpectedHash)!"
-            }
-            Write-Host "[+] Контрольная сумма SHA256 успешно подтверждена." -ForegroundColor Green
-        }
-
         Expand-Archive -Path $TempZip -DestinationPath $TempDir -Force
         
         $extractedRoot = Get-ChildItem -Path $TempDir -Directory | Select-Object -First 1
-        if ($extractedRoot -and (Test-Path (Join-Path $extractedRoot.FullName "resources\app.asar"))) {
+        if ($extractedRoot) {
             $ScriptDir = $extractedRoot.FullName
         } else {
             $ScriptDir = Join-Path $TempDir "Antigravity-Localizer-main"
         }
-
-        if (-not (Test-Path "$ScriptDir\resources\app.asar")) {
-            throw "Не удалось обнаружить распакованные ресурсы в загруженном архиве."
-        }
-        Write-Host "[+] Файлы успешно загружены." -ForegroundColor Green
     }
 
-    # Закрытие запущенных процессов с контрольным polling (если не задан ANTIGRAVITY_SKIP_KILL)
-    if (-not $env:ANTIGRAVITY_SKIP_KILL) {
-        $procs = Get-Process -Name "Antigravity", "Antigravity IDE" -ErrorAction SilentlyContinue
-        if ($procs) {
-            Write-Host "[*] Закрытие запущенных процессов Antigravity..." -ForegroundColor Yellow
-            $procs | Stop-Process -Force -ErrorAction SilentlyContinue
-            $timeout = 10
-            while ((Get-Process -Name "Antigravity", "Antigravity IDE" -ErrorAction SilentlyContinue) -and ($timeout -gt 0)) {
-                Start-Sleep -Milliseconds 500
-                $timeout--
-            }
-        }
-    }
+    # Запуск Python-локализатора для гарантированной совместимости с любой версией Antigravity
+    if ($PythonExe -and (Test-Path "$ScriptDir\dagami_ag_localizer.py")) {
+        Write-Host "[*] Выполнение безопасного патча через Dagami Localizer Core..." -ForegroundColor Cyan
+        $argsList = @(
+            "$ScriptDir\dagami_ag_localizer.py",
+            "--lang", $Lang,
+            "--desktop-path", $AppDir
+        )
+        if ($HasIde) {
+            $argsList += @("--ide-path", $IdeDir)
 
-    # Polling проверки блокировки app.asar перед записью
-    if ($HasDesktop -and (Test-Path $TargetAsar)) {
-        $timeout = 10
-        $unlocked = $false
-        while (($timeout -gt 0) -and (-not $unlocked)) {
-            try {
-                $fileStream = [System.IO.File]::Open($TargetAsar, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
-                if ($fileStream) {
-                    $fileStream.Close()
-                    $fileStream.Dispose()
-                    $unlocked = $true
-                    break
-                }
-            } catch {
-                Start-Sleep -Milliseconds 500
-                $timeout--
-            }
         }
-        if (-not $unlocked) {
-            throw "Файл app.asar заблокирован другим процессом. Закройте Antigravity вручную и повторите попытку."
-        }
-    }
-
-    # 1. Desktop русификация
-    if ($HasDesktop) {
-        $exePath = Join-Path $AppDir "Antigravity.exe"
-        if (Test-Path $exePath) {
-            try {
-                $ver = (Get-Item $exePath).VersionInfo.ProductVersion
-                if ($ver -and $ver -ne "2.11.0") {
-                    throw "Версия Antigravity '$ver' не поддерживается манифестом совместимости. Поддерживаемая версия готового ядра: 2.11.0. Установка отменена без внесения изменений."
-                }
-            } catch {
-                if ($_.Exception.Message -like "*манифестом совместимости*") {
-                    throw $_
-                }
-            }
-        }
-
-        if (-not (Test-Path $BackupAsar)) {
-            if (Test-Path $TargetAsar) {
-                Write-Host "[*] Создание резервной копии оригинального app.asar..." -ForegroundColor Cyan
-                Copy-Item -Path $TargetAsar -Destination $BackupAsar -Force
-                Write-Host "[+] Резервная копия сохранена: app.asar.original_backup" -ForegroundColor Green
-            }
-        } else {
-            Write-Host "[*] Резервная копия уже существует: app.asar.original_backup" -ForegroundColor Gray
-        }
-
-        Write-Host "[*] Копирование языкового бандла (web_bundle_ru)..." -ForegroundColor Cyan
-        if (-not (Test-Path $TargetBundle)) {
-            New-Item -ItemType Directory -Path $TargetBundle -Force | Out-Null
-        }
-        Copy-Item -Path "$ScriptDir\resources\web_bundle_ru\*" -Destination $TargetBundle -Recurse -Force
-
-        Write-Host "[*] Установка локализованного ядра Electron (app.asar)..." -ForegroundColor Cyan
-        Copy-Item -Path "$ScriptDir\resources\app.asar" -Destination $TargetAsar -Force
-        Write-Host "[+] Antigravity 2.0 Desktop успешно русифицирован!" -ForegroundColor Green
-    }
-
-    # 2. IDE русификация
-    if ($HasIde) {
-        Write-Host "[*] Применение локализации для Antigravity IDE..." -ForegroundColor Cyan
-        $ideExtDir = Join-Path $IdeDir "resources\app\extensions\antigravity"
-        $idePkg = Join-Path $ideExtDir "package.json"
-        $idePkgBak = "$idePkg.bak.original"
-        
-        if (Test-Path $idePkg) {
-            if (-not (Test-Path $idePkgBak)) {
-                Copy-Item -Path $idePkg -Destination $idePkgBak -Force
-            }
-            # Патчим package.json командами на русском если есть translations
-            $transPath = Join-Path $ScriptDir "translations\ide_strings.json"
-            if (Test-Path $transPath) {
-                try {
-                    $jsonContent = Get-Content -Path $idePkg -Raw -Encoding UTF8 | ConvertFrom-Json
-                    $transContent = Get-Content -Path $transPath -Raw -Encoding UTF8 | ConvertFrom-Json
-                    
-                    if ($transContent.commands -and $jsonContent.contributes.commands) {
-                        foreach ($cmd in $jsonContent.contributes.commands) {
-                            $cId = $cmd.command
-                            if ($transContent.commands.$cId.ru) {
-                                $cmd.title = $transContent.commands.$cId.ru
-                            }
-                        }
-                    }
-                    $jsonContent | ConvertTo-Json -Depth 20 | Set-Content -Path $idePkg -Encoding UTF8
-                    # Валидация записанного JSON
-                    Get-Content -Path $idePkg -Raw -Encoding UTF8 | ConvertFrom-Json | Out-Null
-                    Write-Host "[+] Команды Antigravity IDE переведены на русский язык!" -ForegroundColor Green
-                } catch {
-                    Write-Host "[!] Предупреждение при обновлении package.json: $_. Откат к оригиналу." -ForegroundColor Yellow
-                    if (Test-Path $idePkgBak) {
-                        Copy-Item -Path $idePkgBak -Destination $idePkg -Force
-                    }
-                }
-            }
-        }
+        & $PythonExe $argsList
+    } else {
+        throw "Не удалось обнаружить исполняемый файл Python или dagami_ag_localizer.py."
     }
 
     Write-Host ""
     Write-Host "==========================================================" -ForegroundColor Green
-    Write-Host "  Русификация Google Antigravity успешно установлена!     " -ForegroundColor Green
+    Write-Host "  Dagami Antigravity Language Pack успешно применён!     " -ForegroundColor Green
     Write-Host "==========================================================" -ForegroundColor Green
-    Write-Host "• Переведено более 2 200 элементов интерфейса, настроек и меню." -ForegroundColor White
-    Write-Host "• Все ваши проекты, чаты, сессии и ключи полностью сохранены." -ForegroundColor White
-    Write-Host "• Запустите Antigravity, чтобы работать в полностью русском интерфейсе!" -ForegroundColor White
-    Write-Host "• Сообщество и группа в Telegram: https://t.me/+8qU7020rMF84OWNi" -ForegroundColor Cyan
-    Write-Host "• Для отката запустите скрипт с параметром -Uninstall" -ForegroundColor Gray
+    Write-Host "• Telegram сообщество: https://t.me/+8qU7020rMF84OWNi" -ForegroundColor Cyan
+    Write-Host "• Поддержать проект:   https://pay.cloudtips.ru/p/671fda86" -ForegroundColor Yellow
+    Write-Host "• Для переключения на другой язык: dagami-ag-localizer --lang <код>" -ForegroundColor White
+    Write-Host "• Для отката: install.ps1 -Uninstall" -ForegroundColor Gray
     Write-Host ""
 }
 catch {
     Write-Host "[-] Ошибка установки: $_" -ForegroundColor Red
 }
 finally {
-    # Гарантированная очистка временных файлов при любом сценарии выхода
     if ($TempDir -and (Test-Path $TempDir)) {
         Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue
     }

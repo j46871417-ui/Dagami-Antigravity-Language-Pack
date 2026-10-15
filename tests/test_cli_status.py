@@ -29,7 +29,7 @@ class TestCliAndStatusIntegrity(unittest.TestCase):
             "--ide-path",
             "C:\\NonExistent\\Path\\To\\Antigravity_IDE_Fake",
         ]
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertNotEqual(proc.returncode, 0, f"Expected non-zero exit code, got {proc.returncode}. Output: {proc.stdout} {proc.stderr}")
 
     def test_cli_returns_nonzero_on_invalid_desktop_path(self):
@@ -42,7 +42,7 @@ class TestCliAndStatusIntegrity(unittest.TestCase):
             "--desktop-path",
             "C:\\NonExistent\\Path\\To\\Antigravity_Desktop_Fake",
         ]
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertNotEqual(proc.returncode, 0, f"Expected non-zero exit code, got {proc.returncode}. Output: {proc.stdout} {proc.stderr}")
 
     def test_step_result_model(self):

@@ -1,0 +1,10 @@
+{
+  "commands": {
+    "antigravity.startAgent": {
+      "es": "Agentes en ejecución"
+    },
+    "antigravity.openSettings": {
+      "es": "Abrir configuración"
+    }
+  }
+}

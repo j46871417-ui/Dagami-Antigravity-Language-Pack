@@ -1,0 +1,16 @@
+{
+  "code": "fr",
+  "name": "French",
+  "nativeName": "Français",
+  "version": "1.0.0",
+  "translatorTarget": "fr",
+  "flag": "🇫🇷",
+  "buttonLabel": "🌐 FR",
+  "buttonTitle": "Traduire le processus de réflexion en français",
+  "autoLabelOn": "⚡ Auto: ACTIF",
+  "autoLabelOff": "⚡ Auto: DÉSACTIF",
+  "autoTitle": "Traduction automatique de la réflexion",
+  "originalButton": "🌐 EN",
+  "originalTitle": "Afficher l'original en anglais",
+  "vscodeLocale": "fr"
+}

@@ -1,0 +1,16 @@
+{
+  "code": "es",
+  "name": "Spanish",
+  "nativeName": "Español",
+  "version": "1.0.0",
+  "translatorTarget": "es",
+  "flag": "🇪🇸",
+  "buttonLabel": "🌐 ES",
+  "buttonTitle": "Traducir pensamientos al español",
+  "autoLabelOn": "⚡ Auto: SÍ",
+  "autoLabelOff": "⚡ Auto: NO",
+  "autoTitle": "Traducción automática de pensamientos",
+  "originalButton": "🌐 EN",
+  "originalTitle": "Mostrar original en inglés",
+  "vscodeLocale": "es"
+}

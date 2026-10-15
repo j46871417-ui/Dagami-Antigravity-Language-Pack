@@ -1,0 +1,16 @@
+{
+  "code": "de",
+  "name": "German",
+  "nativeName": "Deutsch",
+  "version": "1.0.0",
+  "translatorTarget": "de",
+  "flag": "🇩🇪",
+  "buttonLabel": "🌐 DE",
+  "buttonTitle": "Gedankengang ins Deutsche übersetzen",
+  "autoLabelOn": "⚡ Auto: AN",
+  "autoLabelOff": "⚡ Auto: AUS",
+  "autoTitle": "Automatische Übersetzung des Gedankengangs",
+  "originalButton": "🌐 EN",
+  "originalTitle": "Original auf Englisch anzeigen",
+  "vscodeLocale": "de"
+}

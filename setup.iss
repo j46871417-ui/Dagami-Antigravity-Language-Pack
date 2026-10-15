@@ -1,6 +1,6 @@
-#define MyAppName "Google Antigravity Localizer"
-#define MyAppVersion "1.0.1"
-#define MyAppPublisher "Antigravity Open Source Community"
+#define MyAppName "Dagami Antigravity Language Pack"
+#define MyAppVersion "1.1.0"
+#define MyAppPublisher "Dagami & Antigravity Open Source Community"
 #define MyAppURL "https://github.com/j46871417-ui/Antigravity-Localizer"
 
 [Setup]
@@ -16,19 +16,19 @@ DisableDirPage=no
 DirExistsWarning=no
 DisableProgramGroupPage=yes
 DisableFinishedPage=yes
-OutputBaseFilename=AntigravityLocalizer_v1.0.1
+OutputBaseFilename=DagamiAntigravityLanguagePack_v1.1.0
 OutputDir=.
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
-UninstallDisplayName={#MyAppName} (Русификатор)
-VersionInfoVersion=1.0.0.0
+UninstallDisplayName={#MyAppName}
+VersionInfoVersion=1.1.0.0
 VersionInfoCompany={#MyAppPublisher}
-VersionInfoDescription=Google Antigravity Russian Localization Suite
-VersionInfoProductVersion=1.0.0.0
+VersionInfoDescription=Dagami Antigravity Multi-Language Localization Suite
+VersionInfoProductVersion=1.1.0.0
 VersionInfoProductName={#MyAppName}
-VersionInfoCopyright=Copyright (c) 2026 Antigravity Open Source Community
+VersionInfoCopyright=Copyright (c) 2026 Dagami & Antigravity Open Source Community
 
 [Languages]
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
