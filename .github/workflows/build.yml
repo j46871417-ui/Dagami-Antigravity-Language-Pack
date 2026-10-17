@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   PYTHONIOENCODING: utf-8
@@ -30,14 +30,21 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Check JavaScript syntax
-        run: node -c resources/web_bundle_ru/i18n-ru.js
-
-      - name: Run JavaScript regression tests
+      - name: Build language packs
         run: |
-          node tests/test_markdown_shield.mjs
-          node tests/test_translation_governance.mjs
-          node tests/test_queue_and_splitting.mjs
+          python extract_ru_dict.py
+          python build_language_packs.py
+
+      - name: Check JavaScript syntax
+        run: node --check translations/structured_thoughts.js
+
+      - name: Install browser test tools
+        run: |
+          npm install --no-save playwright
+          npx playwright install chromium
+
+      - name: Test structured translation in a browser
+        run: node tests/test_structured_thoughts.cjs
 
       - name: Run Python unit tests
         env:
@@ -50,47 +57,4 @@ jobs:
 
   build:
     needs: test
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-          cache: 'pip'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Build executable
-        run: |
-          pyinstaller --onefile --noconsole --name AntigravityLocalizer --add-data "translations;translations" --add-data "assets;assets" --add-data "resources;resources" --clean antigravity_localizer.py
-          copy dist\AntigravityLocalizer.exe AntigravityLocalizer.exe
-
-      - name: Verify built executable artifact
-        env:
-          ANTIGRAVITY_SKIP_KILL: "1"
-        run: python verify_build_artifact.py AntigravityLocalizer.exe
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: AntigravityLocalizer
-          path: AntigravityLocalizer.exe
-
-      - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: AntigravityLocalizer.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    uses: ./.github/workflows/native-ports.yml

@@ -35,5 +35,4 @@ tests/_rollback_tmp/
 tests/tmp/
 scratch/
 release_dist/
-
-
+.review/

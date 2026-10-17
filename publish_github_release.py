@@ -12,55 +12,16 @@ import subprocess
 import sys
 import urllib.request
 import urllib.error
+from app_info import APP_VERSION
+from app_updates import validate_exe, file_hash
 
 REPO_OWNER = "j46871417-ui"
 REPO_NAME = "Dagami-Antigravity-Language-Pack"
-TAG_NAME = "v1.1.0"
-RELEASE_NAME = "Dagami Antigravity Language Pack v1.1.0 (Windows, Linux, macOS)"
+TAG_NAME = "v" + APP_VERSION
+RELEASE_NAME = "Dagami Antigravity Language Pack " + TAG_NAME
 
-RELEASE_BODY = """# 🚀 Dagami Antigravity Language Pack v1.1.0
+RELEASE_BODY = (Path(__file__).resolve().parent / "CHANGES_1.2.0.md").read_text(encoding="utf-8")
 
-Универсальный пакет мультиязычной локализации для экосистемы **Google Antigravity Desktop** и **Antigravity IDE**.
-
-* 💬 **Telegram-сообщество:** [t.me/+8qU7020rMF84OWNi](https://t.me/+8qU7020rMF84OWNi)
-* ☕ **Поддержать разработку (Донат):** [pay.cloudtips.ru/p/671fda86](https://pay.cloudtips.ru/p/671fda86)
-* 📖 **Подробные инструкции по установке:** [INSTRUCTIONS.md](https://github.com/j46871417-ui/Antigravity-Localizer/blob/main/INSTRUCTIONS.md)
-
----
-
-## 🌟 Что нового в версии 1.1.0:
-
-1. **Кроссплатформенная поддержка:**
-   - 🪟 **Windows:** готовый бинарник `AntigravityLocalizer.exe` (работает без установки Python), батники `install.bat` и `dagami-ag-localizer.cmd`, однострочник PowerShell.
-   - 🐧 **Linux:** сценарии `install.sh` и `dagami-ag-localizer.sh` с автоопределением путей в `/opt`, `/usr/lib`, `~/.local/share` и поддержкой sudo.
-   - 🍏 **macOS:** полная поддержка Apple Silicon (M1/M2/M3/M4) и Intel x86_64 для бандлов `/Applications/Antigravity.app`.
-
-2. **Мультиязычные пакеты и удобный CLI-переключатель:**
-   - `dagami-ag-localizer --lang ru` — Русский (4 500+ терминов)
-   - `dagami-ag-localizer --lang zh` — Китайский (简体中文)
-   - `dagami-ag-localizer --lang es` — Испанский (Español)
-   - `dagami-ag-localizer --lang ja` — Японский (日本語)
-   - `dagami-ag-localizer --lang de` — Немецкий (Deutsch)
-   - `dagami-ag-localizer --lang fr` — Французский (Français)
-   - `dagami-ag-localizer --list` — Таблица доступных языков
-   - `dagami-ag-localizer --update` — Обновление языковых словарей
-   - `dagami-ag-localizer --restore` — Возврат оригинального английского интерфейса
-
-3. **Исправление UI и стабильности перевода:**
-   - Исправлена верстка тулбара рассуждений (`Thought for X seconds`): кнопки `🌐 РУ` и `⚡ Авто` теперь жестко зафиксированы в одну строку и не ломают интерфейс.
-   - Устранены сбои React Fiber: перевод блоков рассуждений отображается через безопасный контейнерный оверлей, сохраняя структуру DOM.
-   - Динамический перевод карточек действий: `Searching for ...`, `Reading ...`, `Editing ...`, `Executing ...`, `Ran ...`, `Analyzed ...` теперь локализуются на лету.
-
----
-
-## 📦 Файлы для загрузки:
-
-* **`AntigravityLocalizer.exe`** — автономный исполняемый файл для Windows (запуск в 1 клик, не требует Python).
-* **`DagamiAntigravityLanguagePack-v1.1.0-Windows.zip`** — полный дистрибутив для Windows (`.exe`, скрипты, словари, документация).
-* **`DagamiAntigravityLanguagePack-v1.1.0-Linux.tar.gz`** — дистрибутив для Linux с исполняемыми скриптами `install.sh` и `dagami-ag-localizer.sh`.
-* **`DagamiAntigravityLanguagePack-v1.1.0-macOS.zip`** — дистрибутив для macOS с поддержкой `.app` бандлов.
-* **`DagamiAntigravityLanguagePack-v1.1.0-AllPlatforms.zip`** — универсальный архив со всеми файлами.
-"""
 
 def get_git_token() -> str:
     res = subprocess.run(
@@ -95,6 +56,17 @@ def api_request(url: str, method: str = "GET", data: bytes = None, headers: dict
                 raise
 
 def main():
+    # Preflight precedes credentials and all API writes.
+    root = Path(__file__).resolve().parent
+    validate_exe(root / "AntigravityLocalizer.exe", APP_VERSION)
+    sums = {}
+    for line in (root / "release_dist" / "SHA256SUMS.txt").read_text(encoding="ascii").splitlines():
+        digest, name = line.split("  ", 1)
+        path = (root if name == "AntigravityLocalizer.exe" else root / "release_dist") / name
+        if file_hash(path) != digest:
+            raise ValueError("Stale release asset: " + name)
+        sums[name] = digest
+
     token = get_git_token()
     headers = {
         "Authorization": f"Bearer {token}",
@@ -108,7 +80,8 @@ def main():
     # 1. Check existing releases
     print("[*] Checking existing releases...")
     status, body = api_request(f"{base_api}/releases", headers=headers)
-    releases = json.loads(body.decode("utf-8")) if status == 200 else []
+    if status != 200: raise RuntimeError("Could not read releases")
+    releases = json.loads(body.decode("utf-8"))
 
     target_release = None
     for r in releases:
@@ -118,16 +91,18 @@ def main():
 
     if target_release:
         release_id = target_release["id"]
-        print(f"[*] Found existing release {TAG_NAME} (id: {release_id}). Updating...")
+        if not target_release.get("draft"):
+            raise ValueError("Release already published; refusing to alter it")
         payload = json.dumps({
             "name": RELEASE_NAME,
             "body": RELEASE_BODY,
-            "draft": False,
+            "draft": True,
             "prerelease": False,
         }).encode("utf-8")
         h = dict(headers)
         h["Content-Type"] = "application/json"
-        api_request(f"{base_api}/releases/{release_id}", method="PATCH", data=payload, headers=h)
+        status, _ = api_request(f"{base_api}/releases/{release_id}", method="PATCH", data=payload, headers=h)
+        if status != 200: raise RuntimeError("Could not update draft")
     else:
         print(f"[*] Creating new release {TAG_NAME}...")
         payload = json.dumps({
@@ -135,7 +110,7 @@ def main():
             "target_commitish": "main",
             "name": RELEASE_NAME,
             "body": RELEASE_BODY,
-            "draft": False,
+            "draft": True,
             "prerelease": False,
         }).encode("utf-8")
         h = dict(headers)
@@ -150,11 +125,12 @@ def main():
 
     # Fetch current release to get fresh upload_url and assets
     status, body = api_request(f"{base_api}/releases/{release_id}", headers=headers)
+    if status != 200: raise RuntimeError("Could not read draft")
     release_info = json.loads(body.decode("utf-8"))
     upload_url_tpl = release_info["upload_url"]  # format: https://uploads.github.com/.../assets{?name,label}
     upload_url_base = upload_url_tpl.split("{")[0]
 
-    existing_assets = {a["name"]: a["id"] for a in release_info.get("assets", [])}
+    existing_assets = {a["name"]: a for a in release_info.get("assets", [])}
 
     # Assets to upload
     repo_root = Path(__file__).resolve().parent
@@ -165,18 +141,20 @@ def main():
         dist_dir / f"DagamiAntigravityLanguagePack-{TAG_NAME}-Linux.tar.gz",
         dist_dir / f"DagamiAntigravityLanguagePack-{TAG_NAME}-macOS.zip",
         dist_dir / f"DagamiAntigravityLanguagePack-{TAG_NAME}-AllPlatforms.zip",
+        dist_dir / "SHA256SUMS.txt",
     ]
 
     for asset_path in assets_to_upload:
         if not asset_path.exists():
-            print(f"[!] Warning: Asset not found: {asset_path}")
-            continue
+            raise FileNotFoundError(asset_path)
 
         name = asset_path.name
-        # Skip if already successfully uploaded
         if name in existing_assets:
-            print(f"[*] Asset already exists: {name}. Skipping...")
-            continue
+            item = existing_assets[name]
+            if item.get("digest") == "sha256:" + file_hash(asset_path) and item.get("size") == asset_path.stat().st_size and item.get("state") == "uploaded":
+                continue
+            status, _ = api_request(f"{base_api}/releases/assets/{item['id']}", method="DELETE", headers=headers)
+            if status != 204: raise RuntimeError("Could not replace stale draft asset")
 
         print(f"[*] Uploading asset: {name} ({asset_path.stat().st_size / (1024*1024):.2f} MB)...")
         content_type = mimetypes.guess_type(asset_path)[0] or "application/octet-stream"
@@ -193,8 +171,23 @@ def main():
         if st in (200, 201):
             print(f"  [+] Successfully uploaded {name}")
         else:
-            print(f"  [-] Failed to upload {name}: {st} {res_body.decode('utf-8')}")
+            raise RuntimeError(f"Upload failed: {name} (HTTP {st})")
 
+    status, body = api_request(f"{base_api}/releases/{release_id}/assets", headers=headers)
+    if status != 200: raise RuntimeError("Could not read draft assets")
+    uploaded = {a["name"]: a for a in json.loads(body)}
+    if set(uploaded) != {p.name for p in assets_to_upload}:
+        raise ValueError("Incomplete draft assets")
+    for path in assets_to_upload:
+        item = uploaded[path.name]
+        digest = file_hash(path)
+        if item.get("digest") != "sha256:" + digest or item["size"] != path.stat().st_size or item["state"] != "uploaded":
+            raise ValueError("Bad uploaded digest: " + path.name)
+    payload = json.dumps({"draft": False}).encode()
+    publish_headers = dict(headers, **{"Content-Type": "application/json"})
+    st, res = api_request(f"{base_api}/releases/{release_id}", method="PATCH", data=payload, headers=publish_headers)
+    if st != 200:
+        raise RuntimeError("Draft was not published")
     print("\n[+] All release assets published successfully!")
     print(f"URL: {release_info.get('html_url')}")
 

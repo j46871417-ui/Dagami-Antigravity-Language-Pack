@@ -290,6 +290,7 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
     rules_js_str = ",\n".join(rules_js_lines)
 
     dict_json = json.dumps(dictionary, ensure_ascii=False, indent=2)
+    thought_engine = (REPO_ROOT / "translations" / "structured_thoughts.js").read_text(encoding="utf-8")
 
     js_code = f"""{PRELOAD_MARKER}
 /**
@@ -323,6 +324,7 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
     if (!node) return true;
     let el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
     while (el) {{
+      if (el.matches && el.matches('[data-testid="thinking-collapsible-content"],.markdown-body,.rendered-markdown,.cursor-edit')) return true;
       if (IGNORE_TAGS.has(el.tagName)) return true;
       if (el.classList) {{
         if (
@@ -392,15 +394,15 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
 
       if (node.hasAttribute('placeholder')) {{
         const trans = translateString(node.getAttribute('placeholder'));
-        if (trans) node.setAttribute('placeholder', trans);
+        if (trans && trans !== node.getAttribute('placeholder')) node.setAttribute('placeholder', trans);
       }}
       if (node.hasAttribute('title')) {{
         const trans = translateString(node.getAttribute('title'));
-        if (trans) node.setAttribute('title', trans);
+        if (trans && trans !== node.getAttribute('title')) node.setAttribute('title', trans);
       }}
       if (node.hasAttribute('aria-label')) {{
         const trans = translateString(node.getAttribute('aria-label'));
-        if (trans) node.setAttribute('aria-label', trans);
+        if (trans && trans !== node.getAttribute('aria-label')) node.setAttribute('aria-label', trans);
       }}
 
       for (let child = node.firstChild; child; child = child.nextSibling) {{
@@ -458,6 +460,7 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
         }} else if (m.type === 'characterData') {{
           translateNode(m.target);
         }} else if (m.type === 'attributes') {{
+          if (isIgnored(m.target)) continue;
           if (['placeholder', 'title', 'aria-label'].includes(m.attributeName)) {{
             const val = m.target.getAttribute(m.attributeName);
             const trans = translateString(val);
@@ -477,10 +480,6 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
       attributeFilter: ['placeholder', 'title', 'aria-label']
     }});
 
-    setInterval(() => {{
-      translateNode(document.body);
-    }}, 200);
-
     translateNode(document.body || document.documentElement);
   }}
 
@@ -490,222 +489,14 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
     startObserver();
   }}
 
-  // =========================================================================
-  // Dynamic On-the-Fly Thinking / Thought Process Translator
-  // =========================================================================
-  (function () {{
-    const STORAGE_KEY_AUTO = 'ag_thoughts_auto_translate';
-    const CACHE = new Map();
-
-    function isAutoTranslate() {{
-      try {{
-        return localStorage.getItem(STORAGE_KEY_AUTO) === 'true';
-      }} catch (e) {{
-        return false;
-      }}
-    }}
-
-    function setAutoTranslate(val) {{
-      try {{
-        localStorage.setItem(STORAGE_KEY_AUTO, val ? 'true' : 'false');
-      }} catch (e) {{}}
-    }}
-
-    async function translateText(text) {{
-      if (!text || !text.trim()) return text;
-      const trimmed = text.trim();
-      if (CACHE.has(trimmed)) return CACHE.get(trimmed);
-
-      try {{
-        const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=' + encodeURIComponent(TARGET_LANG) + '&dt=t&q=' + encodeURIComponent(trimmed);
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        if (Array.isArray(data) && Array.isArray(data[0])) {{
-          const translated = data[0].map(function (item) {{ return item[0] || ''; }}).join('');
-          if (translated) {{
-            CACHE.set(trimmed, translated);
-            return translated;
-          }}
-        }}
-      }} catch (e) {{
-        console.warn('[DagamiLang] Thought translation error:', e);
-      }}
-      return text;
-    }}
-
-    function processThinkingBlock(triggerEl) {{
-      if (typeof window !== 'undefined' && window.__ag_renderThought) return;
-      if (!triggerEl || triggerEl.dataset.hasTranslateControls) return;
-      triggerEl.dataset.hasTranslateControls = 'true';
-
-      var collapsible = triggerEl.closest('[data-testid="thinking-collapsible-trigger"]') || triggerEl;
-      var parentContainer = collapsible.parentElement;
-      if (!parentContainer) return;
-
-      var toolbar = document.createElement('span');
-      toolbar.className = 'ag-thought-toolbar';
-      toolbar.style.cssText = 'display:inline-flex !important; flex-direction:row !important; align-items:center !important; flex-wrap:nowrap !important; white-space:nowrap !important; gap:6px !important; margin-left:10px !important; font-size:11px !important; font-family:sans-serif !important; vertical-align:middle !important; z-index:10 !important; flex-shrink:0 !important;';
-
-      // 1. Target Lang / EN Button
-      var btnTranslate = document.createElement('button');
-      btnTranslate.type = 'button';
-      btnTranslate.className = 'ag-btn-lang';
-      btnTranslate.innerText = BUTTON_LABEL;
-      btnTranslate.title = BUTTON_TITLE;
-      btnTranslate.style.cssText = 'display:inline-flex !important; flex-direction:row !important; align-items:center !important; white-space:nowrap !important; flex-shrink:0 !important; height:20px !important; line-height:18px !important; padding:1px 6px !important; border-radius:4px !important; border:1px solid rgba(128,128,128,0.3) !important; background:rgba(128,128,128,0.1) !important; cursor:pointer !important; font-size:11px !important; color:inherit !important; font-weight:bold !important;';
-
-      // 2. Auto toggle
-      var btnAuto = document.createElement('button');
-      btnAuto.type = 'button';
-      btnAuto.className = 'ag-btn-auto';
-
-      function updateAutoBtn() {{
-        var auto = isAutoTranslate();
-        btnAuto.innerText = auto ? AUTO_LABEL_ON : AUTO_LABEL_OFF;
-        btnAuto.style.cssText = 'display:inline-flex !important; flex-direction:row !important; align-items:center !important; white-space:nowrap !important; flex-shrink:0 !important; height:20px !important; line-height:18px !important; padding:1px 6px !important; border-radius:4px !important; border:1px solid ' + (auto ? '#22c55e' : 'rgba(128,128,128,0.3)') + ' !important; background:' + (auto ? 'rgba(34,197,94,0.15)' : 'rgba(128,128,128,0.1)') + ' !important; color:' + (auto ? '#16a34a' : 'inherit') + ' !important; cursor:pointer !important; font-size:11px !important;';
-        btnAuto.title = AUTO_TITLE;
-      }}
-      updateAutoBtn();
-
-      function stopEvt(e) {{
-        if (!e) return;
-        e.stopPropagation();
-        if (typeof e.stopImmediatePropagation === 'function') {{
-          e.stopImmediatePropagation();
-        }}
-      }}
-
-      btnAuto.addEventListener('click', function (e) {{
-        stopEvt(e);
-        setAutoTranslate(!isAutoTranslate());
-        var allBtns = document.querySelectorAll('.ag-btn-auto');
-        for (var i = 0; i < allBtns.length; i++) {{
-          var auto = isAutoTranslate();
-          allBtns[i].innerText = auto ? AUTO_LABEL_ON : AUTO_LABEL_OFF;
-          allBtns[i].style.borderColor = auto ? '#22c55e' : 'rgba(128,128,128,0.3)';
-          allBtns[i].style.backgroundColor = auto ? 'rgba(34,197,94,0.15)' : 'rgba(128,128,128,0.1)';
-          allBtns[i].style.color = auto ? '#16a34a' : 'inherit';
-        }}
-        if (isAutoTranslate()) {{
-          doTranslate();
-        }}
-      }});
-      btnAuto.addEventListener('mousedown', stopEvt);
-      btnAuto.addEventListener('pointerdown', stopEvt);
-
-      var isTranslated = false;
-
-      function findContentEl() {{
-        var candidates = [
-          parentContainer.querySelector('[data-testid="thinking-collapsible-content"]'),
-          parentContainer.querySelector('.markdown-body'),
-          parentContainer.querySelector('.rendered-markdown'),
-          parentContainer.querySelector('.cursor-edit'),
-          parentContainer.querySelector('pre')
-        ];
-        for (var c = 0; c < candidates.length; c++) {{
-          var el = candidates[c];
-          if (el && el !== triggerEl && !el.contains(triggerEl) && !triggerEl.contains(el)) {{
-            return el;
-          }}
-        }}
-        var sib = triggerEl.nextElementSibling;
-        while (sib) {{
-          if (sib !== toolbar && !sib.contains(toolbar)) return sib;
-          sib = sib.nextElementSibling;
-        }}
-        return null;
-      }}
-
-      async function doTranslate() {{
-        var contentEl = findContentEl();
-        if (!contentEl) return;
-
-        var currentText = contentEl.innerText || contentEl.textContent || '';
-        if (!currentText.trim()) return;
-
-        btnTranslate.innerText = '⏳ ...';
-        var tr = await translateText(currentText);
-        if (tr && tr !== currentText) {{
-          var holder = contentEl.querySelector('.ag-thought-overlay');
-          if (!holder) {{
-            holder = document.createElement('div');
-            holder.className = 'ag-thought-overlay';
-            holder.style.cssText = 'white-space:pre-wrap !important; line-height:1.5 !important; font-family:inherit !important; padding:4px 0 !important;';
-            contentEl.appendChild(holder);
-          }}
-          holder.innerText = tr;
-          holder.style.display = 'block';
-
-          for (var i = 0; i < contentEl.children.length; i++) {{
-            var ch = contentEl.children[i];
-            if (ch !== holder) {{
-              ch.style.display = 'none';
-            }}
-          }}
-
-          isTranslated = true;
-          btnTranslate.innerText = ORIG_BUTTON;
-          btnTranslate.title = ORIG_TITLE;
-          btnTranslate.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
-          btnTranslate.style.borderColor = '#3b82f6';
-        }} else {{
-          btnTranslate.innerText = BUTTON_LABEL;
-        }}
-      }}
-
-      function doShowEnglish() {{
-        var contentEl = findContentEl();
-        if (contentEl) {{
-          var holder = contentEl.querySelector('.ag-thought-overlay');
-          if (holder) {{
-            holder.style.display = 'none';
-          }}
-          for (var i = 0; i < contentEl.children.length; i++) {{
-            var ch = contentEl.children[i];
-            if (ch !== holder) {{
-              ch.style.display = '';
-            }}
-          }}
-          isTranslated = false;
-          btnTranslate.innerText = BUTTON_LABEL;
-          btnTranslate.title = BUTTON_TITLE;
-          btnTranslate.style.backgroundColor = 'rgba(128,128,128,0.1)';
-          btnTranslate.style.borderColor = 'rgba(128,128,128,0.3)';
-        }}
-      }}
-
-      btnTranslate.addEventListener('click', function (e) {{
-        stopEvt(e);
-        if (isTranslated) {{
-          doShowEnglish();
-        }} else {{
-          doTranslate();
-        }}
-      }});
-      btnTranslate.addEventListener('mousedown', stopEvt);
-      btnTranslate.addEventListener('pointerdown', stopEvt);
-
-      toolbar.appendChild(btnTranslate);
-      toolbar.appendChild(btnAuto);
-      triggerEl.appendChild(toolbar);
-
-      if (isAutoTranslate()) {{
-        setTimeout(doTranslate, 600);
-      }}
-    }}
-
-    function scanForThinkingBlocks() {{
-      if (typeof window !== 'undefined' && window.__ag_renderThought) return;
-      var triggers = document.querySelectorAll('[data-testid="thinking-collapsible-trigger"]');
-      for (var i = 0; i < triggers.length; i++) {{
-        processThinkingBlock(triggers[i]);
-      }}
-    }}
-
-    setInterval(scanForThinkingBlocks, 500);
-  }})();
+  {thought_engine}
+  StructuredThoughts.install({{
+    target: TARGET_LANG, button: BUTTON_LABEL, buttonTitle: BUTTON_TITLE,
+    autoOn: AUTO_LABEL_ON, autoOff: AUTO_LABEL_OFF, autoTitle: AUTO_TITLE,
+    originalButton: ORIG_BUTTON, originalTitle: ORIG_TITLE,
+    cancelTitle: {json.dumps({'ru':'Отмена','zh':'取消','es':'Cancelar','ja':'キャンセル','de':'Abbrechen','fr':'Annuler'}.get(lang_code,'Cancel'))},
+    errorTitle: {json.dumps({'ru':'Сбой перевода. Повторите позже.','zh':'翻译失败，请重试。','es':'Error al traducir. Reintenta.','ja':'翻訳に失敗しました。再試行してください。','de':'Fehler. Bitte erneut versuchen.','fr':'Echec. Veuillez reessayer.'}.get(lang_code,'Could not translate. Try again.'))}
+  }});
 
   console.log('[DagamiLang] ' + {json.dumps(meta.get('name', lang_code))} + ' pack active with ' + Object.keys(DICT).length + ' strings');
 }})();
