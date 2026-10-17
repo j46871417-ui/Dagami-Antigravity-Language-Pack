@@ -143,7 +143,7 @@ def asset_name(tag, platform=None):
 def asset_names(tag, platform=None):
     platform = platform or sys.platform
     primary = asset_name(tag, platform)
-    if platform == 'win32': return [primary]
+    if platform == 'win32': return [primary, 'AntigravityLocalizer.exe']
     suffix = '-macOS.zip' if platform == 'darwin' else '-Linux.tar.gz'
     return [primary, 'DagamiAntigravityLanguagePack-' + tag + suffix]
 
@@ -318,7 +318,8 @@ def process_identity(pid):
         return {"path": str(Path(buf.value).resolve()), "start": times[0].dwLowDateTime | times[0].dwHighDateTime << 32}
     finally: kernel.CloseHandle(handle)
 
-def supports_install():
+def supports_install(release=None):
+    if release is not None and not release.get('name', '').endswith('.exe'): return False
     if not getattr(sys, "frozen", False) or sys.platform != "win32": return False
     bundle = getattr(sys, "_MEIPASS", None)
     return not bundle or not Path(bundle).resolve().is_relative_to(Path(sys.executable).resolve().parent)
@@ -328,7 +329,7 @@ def create_plan(release, payload, target=None, parent_pid=None, helper=None):
     validate_release(release)
     if not newer(release): raise ValueError("Уже стоит эта версия или новее.")
     if sys.platform != "win32": raise OSError("Установка доступна в Windows EXE.")
-    if not supports_install(): raise OSError("Для сборки из папки нужен полный пакет.")
+    if not supports_install(release): raise OSError("Для сборки из папки нужен полный пакет.")
     payload = Path(payload).resolve(); verify_download(release, payload); validate_exe(payload, release["tag"])
     target = Path(target or sys.executable).resolve()
     parent_pid = parent_pid or os.getpid()
@@ -345,7 +346,7 @@ def create_plan(release, payload, target=None, parent_pid=None, helper=None):
     return plan_path, helper_path
 
 def start_install(release, payload):
-    if not supports_install(): raise OSError("Эта сборка может лишь скачать EXE. Полный пакет меняется вручную.")
+    if not supports_install(release): raise OSError("Полный пакет скачайте и замените вручную.")
     plan, helper = create_plan(release, payload)
     env = dict(os.environ); env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
     process = subprocess.Popen([str(helper), "--apply-update", str(plan)], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=0x08000000, env=env)

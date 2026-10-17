@@ -75,7 +75,7 @@ class UpdatePanel:
         self.notes.pack(fill=tk.BOTH, expand=True, pady=8)
         row = ttk.Frame(box); row.pack(fill=tk.X)
         self.check_button = ttk.Button(row, text="Проверить", command=self.check); self.check_button.pack(side=tk.LEFT)
-        self.install_button = ttk.Button(row, text="Скачать и установить" if updates.supports_install() else "Скачать", command=self.install)
+        self.install_button = ttk.Button(row, text="Скачать и установить" if updates.supports_install(self.release) else "Скачать", command=self.install)
         self.install_button.pack(side=tk.RIGHT)
         ttk.Label(box, text="Установка — лишь по кнопке. Старый EXE будет сохранён.", wraplength=570).pack(anchor="w", pady=(8, 0))
         result = updates.load_json(updates.state_root() / "last-result.json", {})
@@ -87,13 +87,13 @@ class UpdatePanel:
         if not self.dialog or not self.dialog.winfo_exists(): return
         self.check_button.config(state="disabled" if self.running else "normal")
         can_install = updates.newer(self.release) and not self.running and not self.owner._busy
-        self.install_button.config(state="normal" if can_install else "disabled")
+        self.install_button.config(state="normal" if can_install else "disabled", text="Скачать и установить" if updates.supports_install(self.release) else "Скачать")
         text = self.release["notes"] if self.release else "Нажмите «Проверить». Скачивание и установка сами не начнутся."
         self.notes.config(state="normal"); self.notes.delete("1.0", "end"); self.notes.insert("1.0", text); self.notes.config(state="disabled")
 
     def install(self):
         if self.owner._busy or self.running or not updates.newer(self.release): return
-        release = dict(self.release); frozen = updates.supports_install()
+        release = dict(self.release); frozen = updates.supports_install(release)
         self.status.set("Загрузка и проверка SHA-256…")
         def work():
             payload = updates.download(release)
