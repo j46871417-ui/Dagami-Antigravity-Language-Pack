@@ -24,6 +24,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 
 if sys.platform == "win32":
     try:
@@ -41,6 +42,14 @@ from dagami_ag_localizer import verify_bundle_integrity, __version__ as PY_VERSI
 def check_source_bundle(bundle_dir: Path) -> list[str]:
     """Проверяет полноту исходных файлов бандла."""
     ok, issues = verify_bundle_integrity(bundle_dir)
+    for lang in ("ru", "zh", "es", "ja", "de", "fr"):
+        folder = bundle_dir / "translations" / "languages" / lang
+        for name in ("dict.json", "metadata.json", "desktop.json", "ide.json"):
+            try:
+                data = json.loads((folder / name).read_text("utf-8"))
+                if not isinstance(data, dict) or not data: raise ValueError("Empty pack")
+            except (ValueError, OSError) as error:
+                issues.append(f"{lang}/{name}: {error}")
     return issues
 
 
@@ -68,13 +77,7 @@ def check_web_bundle_engine(engine_file: Path) -> list[str]:
         issues.append(f"Ошибка проверки синтаксиса через node: {e}")
 
     # 2. Проверка критических классов
-    required_symbols = [
-        "class MarkdownShield",
-        "class CircuitBreaker",
-        "class TwoLevelCache",
-        "class GlobalRequestQueue",
-        "function splitTextIntoSafeChunks"
-    ]
+    required_symbols = ["const StructuredThoughts", "function createView", "function createTranslator", "function install", "AbortController"]
     for sym in required_symbols:
         if sym not in content:
             issues.append(f"В {engine_file.name} отсутствует обязательный символ: {sym}")
@@ -102,20 +105,10 @@ def check_version_consistency() -> list[str]:
         except Exception as e:
             issues.append(f"Не удалось проверить package.json: {e}")
 
-    # 2. Program.cs
-    program_cs = REPO_ROOT / "Program.cs"
-    if program_cs.exists():
-        try:
-            cs_content = program_cs.read_text(encoding="utf-8")
-            match = re.search(r'public\s+const\s+string\s+Version\s*=\s*"([^"]+)"', cs_content)
-            if match:
-                cs_ver = match.group(1)
-                if cs_ver != expected_version:
-                    issues.append(f"Версия в Program.cs ({cs_ver}) не совпадает с Python ({expected_version})")
-            else:
-                issues.append("Не удалось найти AppConfig.Version в Program.cs")
-        except Exception as e:
-            issues.append(f"Не удалось проверить Program.cs: {e}")
+    # Historical Program.cs is no longer built or shipped.
+    from app_info import APP_VERSION
+    if APP_VERSION != expected_version:
+        issues.append("Shared app version differs from the entry point.")
 
     return issues
 
@@ -129,38 +122,18 @@ def check_executable_artifact(exe_path: Path) -> list[str]:
     if exe_path.stat().st_size < 1024 * 1024:
         issues.append(f"Размер EXE подозрительно мал ({exe_path.stat().st_size} байт). Скорее всего, ресурсы не были упакованы.")
 
-    env = os.environ.copy()
+    env = dict(os.environ)
     env["ANTIGRAVITY_SKIP_KILL"] = "1"
 
-    # Проверка --version
+    from app_updates import validate_exe
     try:
-        proc_ver = subprocess.run(
-            [str(exe_path), "--version"],
-            capture_output=True,
-            text=True,
-            timeout=15,
-            env=env
-        )
-        out = (proc_ver.stdout + proc_ver.stderr).strip()
-        if PY_VERSION not in out:
-            issues.append(f"Вывод --version ({out}) не содержит ожидаемой версии {PY_VERSION}")
-    except Exception as e:
-        issues.append(f"Не удалось запустить {exe_path.name} --version: {e}")
-
-    # Проверка --verify-bundle
-    try:
-        proc_bundle = subprocess.run(
-            [str(exe_path), "--verify-bundle"],
-            capture_output=True,
-            text=True,
-            timeout=15,
-            env=env
-        )
-        if proc_bundle.returncode != 0:
-            out = (proc_bundle.stdout + proc_bundle.stderr).strip()
-            issues.append(f"Флаг --verify-bundle завершился с кодом {proc_bundle.returncode}: {out}")
-    except Exception as e:
-        issues.append(f"Не удалось запустить {exe_path.name} --verify-bundle: {e}")
+        validate_exe(exe_path, PY_VERSION)
+        # Execute a non-mutating bundled check; the exit code is reliable in windowed builds.
+        result = subprocess.run([str(exe_path), "--verify-bundle"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60, env=env)
+        if result.returncode:
+            issues.append(f"Bundled resource check failed: exit={result.returncode}, hex=0x{result.returncode & 0xffffffff:08x}.")
+    except Exception as error:
+        issues.append("Built EXE failed validation: " + str(error))
 
     return issues
 
@@ -186,9 +159,19 @@ def main():
         bundle_issues = check_source_bundle(bundle_dir)
         all_issues.extend(bundle_issues)
 
-        engine_file = bundle_dir / "resources" / "web_bundle_ru" / "i18n-ru.js"
+        engine_file = bundle_dir / "translations" / "structured_thoughts.js"
         engine_issues = check_web_bundle_engine(engine_file)
         all_issues.extend(engine_issues)
+        import dagami_translator_builder as builder
+        with tempfile.TemporaryDirectory() as temp:
+            for lang in ("ru", "zh", "es", "ja", "de", "fr"):
+                try:
+                    generated = Path(temp) / (lang + ".js")
+                    generated.write_text(builder.build_runtime_translator_js(lang), "utf-8")
+                    proc = subprocess.run(["node", "--check", str(generated)], capture_output=True, text=True, timeout=15)
+                    if proc.returncode: all_issues.append(lang + ": " + proc.stderr)
+                except (OSError, ValueError) as error:
+                    all_issues.append(lang + ": " + str(error))
 
     # 2. Проверка согласованности версий
     print("[*] Проверка согласованности версий компонентов...")

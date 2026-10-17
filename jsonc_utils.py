@@ -25,20 +25,19 @@ def strip_jsonc(text: str) -> str:
     Удаляет комментарии и нормализует завершающие запятые перед закрывающими скобками,
     делая строку пригодной для стандартного json.loads.
     """
-    def replacer(match: re.Match) -> str:
-        s = match.group(0)
-        if s.startswith("/"):
-            return ""
-        return s
-
-    # 1. Удаляем комментарии, сохраняя строковые литералы
-    comment_pattern = re.compile(r'//.*?$|/\*.*?\*/|"(?:\\.|[^\\"])*"', re.DOTALL | re.MULTILINE)
-    no_comments = re.sub(comment_pattern, replacer, text)
-
-    # 2. Удаляем завершающие запятые перед } или ] (trailing commas, допустимые в JSONC)
-    trailing_comma_pattern = re.compile(r',\s*([\]}])')
-    clean = re.sub(trailing_comma_pattern, r'\1', no_comments)
-    return clean
+    tokens = tokenize_javascript(text.lstrip("\ufeff"))
+    text = text.lstrip("\ufeff")
+    remove = []
+    significant = [token for token in tokens if token.type != "COMMENT"]
+    for token in tokens:
+        if token.type == "COMMENT":
+            remove.append((token.start, token.end))
+    for index, token in enumerate(significant[:-1]):
+        if token.type == "PUNCT" and token.value == "," and significant[index + 1].value in ("}", "]"):
+            remove.append((token.start, token.end))
+    for start, end in sorted(remove, reverse=True):
+        text = text[:start] + " " * (end - start) + text[end:]
+    return text
 
 
 def parse_jsonc(text: str) -> Any:
@@ -90,7 +89,7 @@ def update_argv_locale(
         # Парсим текущие активные настройки
         current_data = parse_jsonc(original_content) if original_content.strip() else {}
         if not isinstance(current_data, dict):
-            current_data = {}
+            raise ValueError("argv.json must contain an object")
 
         if current_data.get("locale") == target_locale:
             logger(f"  [argv.json] Параметр locale уже установлен в '{target_locale}'.")
@@ -101,8 +100,12 @@ def update_argv_locale(
 
         # Ищем активный ключ "locale"
         active_locale_token_idx = None
+        depth = 0
         for i, t in enumerate(sig_tokens):
-            if t.type == "STRING" and t.value == "locale":
+            if t.type == "PUNCT":
+                if t.value in ("{", "["): depth += 1
+                elif t.value in ("}", "]"): depth -= 1
+            if depth == 1 and t.type == "STRING" and t.value == "locale":
                 if i + 1 < len(sig_tokens) and sig_tokens[i + 1].value == ":":
                     active_locale_token_idx = i
                     break

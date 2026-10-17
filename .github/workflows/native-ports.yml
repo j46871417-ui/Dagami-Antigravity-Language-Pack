@@ -1,0 +1,67 @@
+name: Native ports
+on:
+  workflow_dispatch:
+  workflow_call:
+  push:
+    branches: ['codex/native-ports-*']
+permissions:
+  contents: read
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            platform: win32
+            arch: x64
+          - runner: ubuntu-22.04
+            platform: linux
+            arch: x64
+          - runner: ubuntu-22.04-arm
+            platform: linux
+            arch: arm64
+          - runner: macos-15-intel
+            platform: darwin
+            arch: x64
+          - runner: macos-15
+            platform: darwin
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    env:
+      PYTHONIOENCODING: utf-8
+      ANTIGRAVITY_SKIP_KILL: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: ${{ matrix.arch }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Linux Tk and virtual display
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk xvfb
+      - name: Build tools
+        run: python -m pip install -r requirements.txt
+      - name: Build Linux app
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum python build_release.py --package
+      - name: Build Windows or macOS app
+        if: runner.os != 'Linux'
+        run: python build_release.py --package
+      - name: Upload native result
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dagami-${{ matrix.platform }}-${{ matrix.arch }}
+          if-no-files-found: error
+          path: |
+            release_dist/*-${{ matrix.arch }}.tar.gz
+            release_dist/*-${{ matrix.arch }}.tar.gz.sha256
+            release_dist/*-${{ matrix.arch }}.zip
+            release_dist/*-${{ matrix.arch }}.zip.sha256
+            build/native-${{ matrix.platform }}-${{ matrix.arch }}.json

@@ -3,12 +3,12 @@
 # Dagami Antigravity Language Pack — Universal Installer (Linux & macOS)
 # Multi-language localization for Google Antigravity Desktop & IDE
 #
-# GitHub:   https://github.com/j46871417-ui/Antigravity-Localizer
+# GitHub:   https://github.com/j46871417-ui/Dagami-Antigravity-Language-Pack
 # Telegram: https://t.me/+8qU7020rMF84OWNi
 # Donation: https://pay.cloudtips.ru/p/671fda86
 # =============================================================================
 
-set -e
+set -euo pipefail
 
 # ANSI Colors
 CLR_RESET="\033[0m"
@@ -21,9 +21,9 @@ CLR_WHITE="\033[97m"
 
 print_banner() {
     echo -e "${CLR_CYAN}==========================================================${CLR_RESET}"
-    echo -e "${CLR_GREEN}${CLR_BOLD}    🚀 Dagami Antigravity Language Pack (v1.1.0)${CLR_RESET}"
+    echo -e "${CLR_GREEN}${CLR_BOLD}    🚀 Dagami Antigravity Language Pack (v1.2.0)${CLR_RESET}"
     echo -e "${CLR_WHITE}    Мультиязычная локализация Google Antigravity${CLR_RESET}"
-    echo -e "${CLR_CYAN}    GitHub:   https://github.com/j46871417-ui/Antigravity-Localizer${CLR_RESET}"
+    echo -e "${CLR_CYAN}    GitHub:   https://github.com/j46871417-ui/Dagami-Antigravity-Language-Pack${CLR_RESET}"
     echo -e "${CLR_CYAN}    Telegram: https://t.me/+8qU7020rMF84OWNi${CLR_RESET}"
     echo -e "${CLR_YELLOW}    Донат:    https://pay.cloudtips.ru/p/671fda86${CLR_RESET}"
     echo -e "${CLR_CYAN}==========================================================${CLR_RESET}"
@@ -40,8 +40,8 @@ PYTHON_BIN=""
 for candidate in python3 python; do
     if command -v "$candidate" >/dev/null 2>&1; then
         # Check that it's Python 3
-        VER=$("$candidate" -c "import sys; print(sys.version_info[0])" 2>/dev/null || echo "0")
-        if [ "$VER" -ge 3 ]; then
+        VER=$("$candidate" -c "import sys; print(int(sys.version_info >= (3, 10)))" 2>/dev/null || echo "0")
+        if [ "$VER" -eq 1 ]; then
             PYTHON_BIN="$candidate"
             break
         fi
@@ -51,7 +51,7 @@ done
 if [ -z "$PYTHON_BIN" ]; then
     print_banner
     echo -e "${CLR_RED}❌ Ошибка: Python 3 не обнаружен в вашей системе.${CLR_RESET}"
-    echo "Для работы установщика необходим Python 3.6+."
+    echo "Для работы установщика необходим Python 3.10+."
     echo ""
     echo "Команды для установки:"
     if [ "$OS_TYPE" = "Darwin" ]; then
@@ -80,8 +80,8 @@ else
     echo -e "${CLR_CYAN}📥 Загрузка последней версии Dagami Antigravity Language Pack...${CLR_RESET}"
     TMP_DIR="$(mktemp -d /tmp/dagami_ag_XXXXXX)"
     trap 'rm -rf "$TMP_DIR"' EXIT
-    curl -fsSL "https://github.com/j46871417-ui/Antigravity-Localizer/archive/refs/heads/main.tar.gz" | tar -xz -C "$TMP_DIR"
-    LOCALIZER_PY="$TMP_DIR/Antigravity-Localizer-main/dagami_ag_localizer.py"
+    curl -fsSL "https://github.com/j46871417-ui/Dagami-Antigravity-Language-Pack/archive/refs/heads/main.tar.gz" | tar -xz -C "$TMP_DIR"
+    LOCALIZER_PY="$TMP_DIR/Dagami-Antigravity-Language-Pack-main/dagami_ag_localizer.py"
 fi
 
 # 3. Interactive Menu if no arguments passed

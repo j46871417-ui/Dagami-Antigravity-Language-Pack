@@ -309,6 +309,10 @@ def build_packs():
         with open(lang_dir / "desktop.json", "w", encoding="utf-8") as f:
             json.dump(desktop, f, ensure_ascii=False, indent=2)
 
+        if lang_code == "ru":
+            desktop = json.loads((LANG_ROOT.parent / "desktop_strings.json").read_text("utf-8")) | desktop
+            (lang_dir / "desktop.json").write_text(json.dumps(desktop, ensure_ascii=False, indent=2), "utf-8")
+
         # Build IDE commands
         ide_data = {
             "commands": {
@@ -316,6 +320,8 @@ def build_packs():
                 "antigravity.openSettings": {lang_code: COMMON_TERMS.get("Open Settings", {}).get(lang_code, "Open Settings")},
             }
         }
+        if lang_code == "ru":
+            ide_data = json.loads((LANG_ROOT.parent / "ide_strings.json").read_text("utf-8"))
         with open(lang_dir / "ide.json", "w", encoding="utf-8") as f:
             json.dump(ide_data, f, ensure_ascii=False, indent=2)
 

@@ -87,6 +87,67 @@ class JsToken(NamedTuple):
     quote: Optional[str] = None
 
 
+def _expression_end(source: str, index: int) -> int:
+    """Skip one ${...}, respecting quoted braces and nested templates."""
+    depth, n, previous = 1, len(source), "="
+    while index < n:
+        char = source[index]
+        if char in "\\\"'`":
+            if char == "\\":
+                index += 2
+                continue
+            quote = char
+            index += 1
+            while index < n:
+                if source[index] == "\\":
+                    index += 2
+                elif source[index] == quote:
+                    index += 1
+                    break
+                elif quote == '`' and source.startswith('${', index):
+                    index = _expression_end(source, index + 2)
+                else:
+                    index += 1
+            previous = 'x'
+            continue
+        if source.startswith('//', index):
+            end = source.find('\n', index + 2)
+            index = n if end < 0 else end + 1
+            continue
+        if source.startswith('/*', index):
+            end = source.find('*/', index + 2)
+            index = n if end < 0 else end + 2
+            continue
+        if char == '/' and previous in '=([{,:;!?&|+*-~%^<>':
+            index += 1
+            in_class = False
+            while index < n:
+                c = source[index]
+                if c == '\\':
+                    index += 2; continue
+                if c == '[': in_class = True
+                elif c == ']': in_class = False
+                elif c == '/' and not in_class:
+                    index += 1
+                    while index < n and source[index].isalpha(): index += 1
+                    break
+                index += 1
+            previous = 'x'
+            continue
+        if char == '{': depth += 1
+        elif char == '}':
+            depth -= 1
+            if not depth: return index + 1
+        if char.isalpha() or char in '_$':
+            start = index
+            while index < n and (source[index].isalnum() or source[index] in '_$'): index += 1
+            previous = '=' if source[start:index] in ('return', 'throw', 'yield', 'case', 'void', 'typeof') else 'x'
+            continue
+        if not char.isspace(): previous = char
+        index += 1
+    raise ValueError('Unclosed template expression')
+
+
 def tokenize_javascript(source: str) -> list[JsToken]:
     """
     Линейный токенизатор JavaScript / TypeScript кода.
@@ -161,15 +222,9 @@ def tokenize_javascript(source: str) -> list[JsToken]:
                     break
                 elif quote == "`" and ch == "$" and i + 1 < n and source[i + 1] == "{":
                     val_chars.append("${")
-                    i += 2
-                    depth = 1
-                    while i < n and depth > 0:
-                        if source[i] == "{":
-                            depth += 1
-                        elif source[i] == "}":
-                            depth -= 1
-                        val_chars.append(source[i])
-                        i += 1
+                    expression_start = i + 2
+                    i = _expression_end(source, expression_start)
+                    val_chars.append(source[expression_start:i])
                     continue
                 else:
                     val_chars.append(ch)
@@ -315,6 +370,8 @@ def replace_js_string_literals(
         if tok.type != "STRING" or not tok.quote:
             continue
 
+        if tok.quote == "`" and "${" in tok.raw:
+            continue
         source_val = tok.value
         if source_val not in string_map:
             continue

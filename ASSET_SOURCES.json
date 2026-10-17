@@ -1,0 +1,19 @@
+{
+  "source": "https://github.com/j46871417-ui/Dagami-Antigravity-Language-Pack",
+  "note": "Recovered from the previously downloaded local copy of the same user repository; absent from the supplied tar. NLS is applied by app keys, never by a fixed index array.",
+  "sha256": {
+    "ru_pack.zip": "7a337a531e7f050808a362b16642089a79569754ea1bbd4b40f5d6fe61501682",
+    "nls.messages.ru.json": "096899ce0081229a18641a964a5dbda49a0402a2ccf74e5b2e6c857d061640fb"
+  },
+  "app_icon": {
+    "source": "assets/app-icon.svg",
+    "renderer": "build_icon.py",
+    "type": "Original code-native translation mark, not the proxy icon",
+    "sha256": {
+      "app-icon.svg": "6ae50021142533381f22c55c83852d02a27b2a6a477cd1711222a28a7d1e885a",
+      "app-icon.ico": "e3eb6830ffac059802c88c1d8710cf851f385ebff32c0a460f76ef9617947d18",
+      "app-icon.icns": "984517f49f3600447b04d30282dfa198861e149e6d98eb602b1205721a3fbe0b",
+      "app-icon-256.png": "724aabd421940805f9b9360bd668396b11531a19de03d9c48a21a2730720c461"
+    }
+  }
+}
