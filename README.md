@@ -3,10 +3,26 @@
 Языки для Google Antigravity Desktop и IDE: русский, китайский, испанский,
 японский, немецкий и французский.
 
-Версия 1.2.0 — локальная сборка с правками аудитов.
-[Итог правок и рамки](AUDIT_FIXES.md). В сеть релиз не выложен.
+Версия 1.2.0 — нативные сборки для Windows, Linux и macOS.
+[Итог правок и рамки](AUDIT_FIXES.md). [Порты и рамки](PORTS.md).
+
+![Иконка](assets/app-icon-128.png)
 [Релизы](https://github.com/j46871417-ui/Dagami-Antigravity-Language-Pack/releases) ·
 [Что сделано](CHANGES_1.2.0.md) · [Как запустить](INSTRUCTIONS.md)
+
+## Готовые сборки
+
+| ОС | CPU | Пакет |
+| --- | --- | --- |
+| Windows | x64 | ZIP |
+| Linux | x64, ARM64 | TAR.GZ |
+| macOS 15+ | Intel, Apple Silicon | TAR.GZ |
+
+Python входит в готовые сборки. Для запуска кода нужны Python и Tk.
+Пять пакетов прошли сборку и `--verify-bundle` в CI.
+GUI и запись в реальную IDE на Linux/macOS пока не проверены.
+На macOS правка IDE с подписью или ASAR integrity даёт отказ до записи.
+Сама утилита имеет подпись ad hoc, без Developer ID и нотариуса Apple.
 
 ## Windows
 
@@ -77,7 +93,7 @@ dagami-ag-localizer --download-update
 ~~~
 
 При запуске из исходников в Windows есть .cmd, в Linux/macOS — .sh.
-В Windows ZIP лежит один EXE и справка. Для CLI передайте флаги этому EXE.
+В Windows ZIP лежит EXE, папка `_internal` и справка. Для CLI передайте флаги этому EXE.
 Файл .cmd нужен лишь при запуске из исходников.
 Флаг --update проверяет местные языки; он не ставит новую версию утилиты.
 После смены PATH откройте новый терминал.
@@ -90,7 +106,7 @@ dagami-ag-localizer --download-update
 - [GitHub](app_updates.py): версии, сеть, SHA-256, план и замена EXE.
 - [Окно версий](update_ui.py): фоновая проверка и явная кнопка установки.
 - [Данные](app_info.py): одно имя и номер для CLI, GUI, сборки и архива.
-- [Сборка](build_release.py): один Windows EXE и все архивы из него.
+- [Сборка](build_release.py): нативный пакет для своей ОС и CPU.
 
 ASAR читается с вашего ПК, а не заменяется чужим готовым файлом.
 Исходная копия хранится рядом. При смене языка за основу берётся эта копия.

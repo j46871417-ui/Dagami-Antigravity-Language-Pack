@@ -29,6 +29,6 @@ def update_state_dir(system=None, home=None, environ=None):
 def native_asset_name(tag, system=None, arch=None):
     system = system or sys.platform
     arch = arch or architecture()
-    if system == 'win32': return 'AntigravityLocalizer.exe'
+    if system == 'win32': return f'DagamiAntigravityLanguagePack-{tag}-Windows-{arch}.zip'
     label = {'linux':'Linux','darwin':'macOS'}[system]
     return f'DagamiAntigravityLanguagePack-{tag}-{label}-{arch}.tar.gz'
