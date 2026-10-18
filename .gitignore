@@ -132,3 +132,8 @@ desktop.ini
 /resources/web_bundle_ru/i18n-ru.js
 /assets/dagami-icon.png
 /build_native_exe.bat
+
+# Packaged app snapshots and browser network logs are not source
+*.asar
+*.asar.*
+*.har
