@@ -40,7 +40,6 @@ def main():
         image.resize((size,size),Image.Resampling.LANCZOS).save(OUT / f'app-icon-{size}.png')
     image.save(OUT / 'app-icon.ico',sizes=[(n,n) for n in (16,24,32,48,64,128,256)])
     image.save(OUT / 'app-icon.icns')
-    (OUT / 'dagami-icon.png').write_bytes((OUT / 'app-icon-64.png').read_bytes())
     print('Icon: SVG, PNG, ICO and ICNS saved in assets')
 
 if __name__ == '__main__': main()

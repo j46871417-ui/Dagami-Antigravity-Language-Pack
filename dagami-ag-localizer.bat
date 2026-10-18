@@ -1,2 +1,3 @@
 @echo off
-python "%~dp0dagami_ag_localizer.py" %*
+call "%~dp0dagami-ag-localizer.cmd" %*
+exit /b %errorlevel%

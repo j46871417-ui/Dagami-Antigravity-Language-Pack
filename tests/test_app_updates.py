@@ -55,8 +55,8 @@ class UpdateChecks(unittest.TestCase):
         r=release();r["size"]=u.MAX_FILE+1
         with self.assertRaises(ValueError):u.validate_release(r)
     def test_platform_asset(self):
-        self.assertTrue(u.asset_name("v1.2.1","darwin").endswith("-macOS.zip"))
-        self.assertTrue(u.asset_name("v1.2.1","linux").endswith("-Linux.tar.gz"))
+        self.assertRegex(u.asset_name("v1.2.1","darwin"), r"^DagamiAntigravityLanguagePack-v1\.2\.1-macOS-(?:x64|arm64)\.tar\.gz$")
+        self.assertRegex(u.asset_name("v1.2.1","linux"), r"^DagamiAntigravityLanguagePack-v1\.2\.1-Linux-(?:x64|arm64)\.tar\.gz$")
     def test_foreign_asset_name(self):
         r=release();r["name"]="../../evil.exe"
         with self.assertRaises(ValueError):u.validate_release(r)

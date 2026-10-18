@@ -1,0 +1,5 @@
+#!/bin/sh
+if command -v python3 >/dev/null 2>&1; then
+  exec python3 tools/check_source_hygiene.py
+fi
+exec python tools/check_source_hygiene.py
