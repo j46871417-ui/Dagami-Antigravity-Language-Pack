@@ -35,7 +35,7 @@ COMMON_FILES = [
     "INSTRUCTIONS.md",
     "CHANGES_1.2.0.md",
     "README.md",
-    "LICENSE", "AUDIT_FIXES.md", "ASSET_SOURCES.json",
+    "LICENSE", "ASSET_SOURCES.json",
 ]
 
 def add_to_zip(zf: zipfile.ZipFile, root_dir: Path, arc_prefix: str, files: list, dirs: list):
@@ -86,7 +86,7 @@ def add_windows_runtime(zf, prefix):
 def package_windows():
     out_zip = DIST_DIR / f"{BASE_NAME}-Windows.zip"
     # The standalone EXE already holds its runtime, dictionaries and assets.
-    files = ["INSTRUCTIONS.md", "CHANGES_1.2.0.md", "README.md", "LICENSE", "AUDIT_FIXES.md", "ASSET_SOURCES.json",
+    files = ["INSTRUCTIONS.md", "CHANGES_1.2.0.md", "README.md", "LICENSE", "ASSET_SOURCES.json",
     ]
     print(f"[*] Packaging Windows: {out_zip.name}...")
     with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as zf:

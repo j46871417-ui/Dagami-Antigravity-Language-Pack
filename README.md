@@ -4,7 +4,7 @@
 японский, немецкий и французский.
 
 Версия 1.2.0 — нативные сборки для Windows, Linux и macOS.
-[Итог правок и рамки](AUDIT_FIXES.md). [Порты и рамки](PORTS.md).
+[Порты и рамки](PORTS.md).
 
 ![Иконка](assets/app-icon-128.png)
 [Релизы](https://github.com/j46871417-ui/Dagami-Antigravity-Language-Pack/releases) ·
