@@ -1,11 +1,5 @@
 # Python
-__pycache__/
-*.py[cod]
 *.egg-info/
-.venv/
-venv/
-.env
-*.env
 
 # PyInstaller / build artifacts
 build/
@@ -21,10 +15,6 @@ payload.zip
 *.asar.bak.original
 
 # IDE / OS
-.idea/
-.vscode/
-Thumbs.db
-desktop.ini
 *.cer
 
 # Временные каталоги тестов (создаются и удаляются самими тестами; исключены,
@@ -35,66 +25,11 @@ tests/_rollback_tmp/
 tests/tmp/
 scratch/
 release_dist/
-.review/
 
 # Secrets, local state and private notes
-.env.*
-!.env.example
-!.env.*.example
-!*.env.example
-.aws/
-.ssh/
-.codex/
-.agents/
-secrets/
-credentials/
-private/
-*.pem
-*.key
-*.p12
-*.pfx
-*.kdbx
-id_rsa
-id_ed25519
-credentials.json
-secrets.json
-*.secret.json
-*.local.json
-*.sqlite
-*.sqlite3
-*.db
-*.db-wal
-*.db-shm
-*.db-journal
 /AGENTS.md
-/AUDIT_FIXES.md
-/FIX_*_REPORT.md
-/UI_DESIGN.md
 
 # Generated packages; keep the translation dictionary needed by the app
-*.exe
-*.msi
-*.msix
-*.zip
-!/assets/ru_pack.zip
-*.7z
-*.dmg
-*.deb
-*.rpm
-*.tar.gz
-*.tar.xz
-*.log
-*.tmp
-*.bak
-*.pdb
-/tmp*/
-/piptmp/
-/.piptmp/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-node_modules/
-.DS_Store
 
 # Source hygiene: local data, credentials, build output and accidental copies
 .env
