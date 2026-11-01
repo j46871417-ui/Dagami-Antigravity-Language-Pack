@@ -86,7 +86,10 @@ class CliSafety(unittest.TestCase):
         localizer = app.DagamiLocalizer(cli_path=Path('agy.exe'), no_kill=True)
         with patch.object(localizer, 'install_cli', return_value=True) as install, \
              patch.object(localizer, 'install_desktop') as desktop, \
+             patch.object(app.sys, 'stdin') as stdin, \
              patch('builtins.input', side_effect=['1', '0']), patch.object(app, 'safe_print'):
+            stdin.closed = False
+            stdin.isatty.return_value = True
             app.run_interactive_cli(localizer)
         install.assert_called_once_with('ru')
         desktop.assert_not_called()
@@ -119,12 +122,12 @@ class CurrentIde(unittest.TestCase):
                 self.assertIn(app.PRELOAD_MARKER.encode(), translated)
                 self.assertIn(b'antigravity.openSettings', translated)
                 self.assertTrue(translated.startswith(source.rstrip()))
-                self.assertIn('"locale":"ru"', argv.read_text())
+                self.assertIn('"locale":"ru"', argv.read_text(encoding='utf-8'))
                 self.assertTrue(localizer.install_ide())
                 self.assertEqual(translated, panel.read_bytes())
                 self.assertTrue(localizer.install_ide('es'))
-                self.assertEqual(panel.read_text().count(app.PRELOAD_MARKER), 1)
-                self.assertIn('TARGET_LANG = "es"', panel.read_text())
+                self.assertEqual(panel.read_text(encoding='utf-8').count(app.PRELOAD_MARKER), 1)
+                self.assertIn('TARGET_LANG = "es"', panel.read_text(encoding='utf-8'))
                 self.assertTrue(localizer.restore_all())
             self.assertEqual(raw, package.read_bytes())
             self.assertEqual(source, panel.read_bytes())
