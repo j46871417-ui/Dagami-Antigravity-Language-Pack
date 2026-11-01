@@ -10,7 +10,10 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import app_updates as u
 
-def release(tag="v1.2.1", data=b"MZ"+b"x"*1022):
+def release(tag=None, data=b"MZ"+b"x"*1022):
+    if tag is None:
+        major, minor, patch_number = map(int, u.APP_VERSION.split('.'))
+        tag = f'v{major}.{minor}.{patch_number+1}'
     name="AntigravityLocalizer.exe"
     return {"tag":tag,"page":"https://github.com/"+u.REPOSITORY+"/releases/tag/"+tag,
             "name":name,"url":"https://github.com/"+u.REPOSITORY+"/releases/download/"+tag+"/"+name,
@@ -79,7 +82,7 @@ class UpdateChecks(unittest.TestCase):
         u.save_json(u.state_root()/"check.json",{"checked":float("nan")});self.assertTrue(u.due())
     def test_check_only_saves_metadata(self):
         with patch.object(u,"network",return_value=json.dumps([feed(release())]).encode()),patch.object(u.sys,"platform","win32"):
-            self.assertEqual(u.check()["tag"],"v1.2.1")
+            self.assertEqual(u.check()["tag"],release()['tag'])
         self.assertFalse((u.state_root()/"staged").exists())
     def test_hash_and_size(self):
         p=self.root/"asset";p.write_bytes(b"MZ"+b"x"*1022);u.verify_download(release(),p)

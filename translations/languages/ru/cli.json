@@ -1,0 +1,31 @@
+{
+  "version": "1.4.10",
+  "platform": "win32-x64",
+  "scope": "Reviewed help and service descriptions only; commands, model output and code are not translated.",
+  "reviewed_sha256": [
+    "94e4d860933071b43638e5a0cade86843d772990ae3c904dd891f08a996c8ad6",
+    "fade3d94282b8c1b12a24e54ffa930183bd6f6ff7a73a90421fb0aab4d9402ba"
+  ],
+  "strings": {
+    "Model for the current CLI session": "Модель сессии",
+    "Available subcommands:": "Команды CLI:",
+    "List available models": "Модели",
+    "List available agents": "Агенты",
+    "Show changelog and release notes": "История версий",
+    "Run a single prompt non-interactively and print the response": "Один запрос и вывод ответа",
+    "Auto-approve all tool permission requests without prompting": "Без запросов разрешений",
+    "Configure environment paths and shell settings": "Пути и оболочка",
+    "Create a new project for this session": "Новый проект сессии",
+    "Project ID or project name for the current CLI session": "ID или имя проекта сессии",
+    "Resume a previous conversation by ID": "Продолжить по ID",
+    "Continue the most recent conversation": "Продолжить диалог",
+    "Override CLI log file path": "Путь журнала",
+    "Run in a sandbox with terminal restrictions enabled": "Песочница терминала",
+    "Run an initial prompt interactively and continue the session": "Запрос и продолжение диалога",
+    "Create a remote connection for the CLI session on start up": "Удалённый доступ при запуске",
+    "Agent for the current CLI session": "Агент сессии",
+    "Settings for this session only, never saved: a JSON object of settings.json keys, inline or as a file path": "Настройки сессии без записи: JSON или путь к файлу settings.json",
+    "Manage plugins (install, uninstall, list, enable, disable)": "Плагины (install, uninstall, list, enable, disable)",
+    "Output format for print mode (text, json, stream-json)": "Формат вывода (text, json, stream-json)"
+  }
+}

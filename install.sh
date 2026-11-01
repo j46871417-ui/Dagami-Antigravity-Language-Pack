@@ -21,7 +21,7 @@ CLR_WHITE="\033[97m"
 
 print_banner() {
     echo -e "${CLR_CYAN}==========================================================${CLR_RESET}"
-    echo -e "${CLR_GREEN}${CLR_BOLD}    🚀 Dagami Antigravity Language Pack (v1.2.0)${CLR_RESET}"
+    echo -e "${CLR_GREEN}${CLR_BOLD}    🚀 Dagami Antigravity Language Pack${CLR_RESET}"
     echo -e "${CLR_WHITE}    Мультиязычная локализация Google Antigravity${CLR_RESET}"
     echo -e "${CLR_CYAN}    GitHub:   https://github.com/j46871417-ui/Dagami-Antigravity-Language-Pack${CLR_RESET}"
     echo -e "${CLR_CYAN}    Telegram: https://t.me/+8qU7020rMF84OWNi${CLR_RESET}"

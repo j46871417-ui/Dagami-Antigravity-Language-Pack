@@ -1,5 +1,5 @@
 ﻿#define MyAppName "Dagami Antigravity Language Pack"
-#define MyAppVersion "1.2.0"
+#define MyAppVersion "1.3.1"
 [Setup]
 SetupIconFile=assets\app-icon.ico
 AppId={{D8156170-D57B-4E3E-8153-62529BAA245E}

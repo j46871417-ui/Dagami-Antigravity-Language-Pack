@@ -1,7 +1,7 @@
 ﻿param(
     [string]$Lang = '', [switch]$Install, [switch]$Uninstall,
     [switch]$List, [switch]$Update, [string]$AppDir = '',
-    [string]$IdeDir = '', [string]$ExpectedHash = ''
+    [string]$IdeDir = '', [string]$CliPath = '', [string]$ExpectedHash = ''
 )
 $ErrorActionPreference = 'Stop'
 $scriptRoot = $PSScriptRoot
@@ -37,6 +37,7 @@ try {
     else { if (-not $Lang) { $Lang='ru' }; $cliArgs += @('--lang', $Lang) }
     if ($AppDir) { $cliArgs += @('--desktop-path', $AppDir) }
     if ($IdeDir) { $cliArgs += @('--ide-path', $IdeDir) }
+    if ($CliPath) { $cliArgs += @('--cli-path', $CliPath) }
     & $pythonCommand.Source @cliArgs
     if ($LASTEXITCODE -ne 0) { throw "Сбой. Код: $LASTEXITCODE. См. журнал выше." }
 }

@@ -195,7 +195,7 @@ def build_interface(owner):
     configure_theme(root)
     dpi = max(1.0, root.winfo_fpixels('1i') / 96)
     width = min(round(900*dpi), max(640, root.winfo_screenwidth() - 48))
-    height = min(round(650*dpi), max(420, root.winfo_screenheight() - 96))
+    height = min(round(740*dpi), max(420, root.winfo_screenheight() - 96))
     root.geometry(f'{width}x{height}')
     root.minsize(min(round(840*dpi), width), min(round(600*dpi), height))
     root.columnconfigure(1, weight=1)
@@ -224,7 +224,7 @@ def build_interface(owner):
     ttk.Label(brand, text='Language Pack', font=(UI_FONT, 9), foreground=COLORS['muted'], style='Sidebar.TLabel').grid(row=1, column=1, sticky='w')
     ttk.Button(side, text='Язык', style='Nav.TButton', command=lambda: owner._language_controls[0].focus_set()).grid(row=1, column=0, sticky='ew', pady=(0, 8))
     ttk.Button(side, text='Журнал', style='Link.TButton', command=lambda: owner.log_text.focus_set()).grid(row=2, column=0, sticky='ew')
-    ttk.Label(side, text='Antigravity\nDesktop и IDE', style='Sidebar.TLabel', foreground=COLORS['muted'], font=(UI_FONT, 9)).grid(row=3, column=0, sticky='nw', pady=(20, 0))
+    ttk.Label(side, text='Antigravity\nDesktop · IDE · CLI', style='Sidebar.TLabel', foreground=COLORS['muted'], font=(UI_FONT, 9)).grid(row=3, column=0, sticky='nw', pady=(20, 0))
     footer = ttk.Frame(side, style='Sidebar.TFrame')
     footer.grid(row=5, column=0, sticky='sew')
     ttk.Label(footer, text='Версия '+owner.version, foreground=COLORS['muted'], font=(UI_FONT, 9), style='Sidebar.TLabel').pack(anchor='w', pady=(0, 10))
@@ -242,7 +242,7 @@ def build_interface(owner):
     main.columnconfigure(0, weight=1)
     main.rowconfigure(6, weight=1)
     ttk.Label(main, text='Язык приложения', style='Heading.TLabel').grid(row=1, column=0, sticky='w')
-    ttk.Label(main, text='Языковой пакет для Antigravity Desktop и IDE.', style='App.TLabel', foreground=COLORS['muted']).grid(row=2, column=0, sticky='w', pady=(2, 10))
+    ttk.Label(main, text='Desktop, IDE и служебные строки CLI. Закройте выбранные приложения.', style='App.TLabel', foreground=COLORS['muted']).grid(row=2, column=0, sticky='w', pady=(2, 10))
 
     language = Card(main)
     language.grid(row=3, column=0, sticky='ew', pady=(0, 10))
@@ -268,7 +268,8 @@ def build_interface(owner):
     ttk.Label(apps.body, text='2. Выберите приложения', style='Title.TLabel').grid(row=0, column=0, sticky='w', pady=(0, 10))
     for index, (title, var, path, browse, status_attr) in enumerate([
         ('Antigravity IDE', owner.opt_ide, owner.ide_path_var, owner._browse_ide, 'ide_status_label'),
-        ('Antigravity Desktop', owner.opt_desktop, owner.desktop_path_var, owner._browse_desktop, 'desk_status_label')]):
+        ('Antigravity Desktop', owner.opt_desktop, owner.desktop_path_var, owner._browse_desktop, 'desk_status_label'),
+        ('Antigravity CLI · русский', owner.opt_cli, owner.cli_path_var, owner._browse_cli, 'cli_status_label')]):
         row = ttk.Frame(apps.body, style='Card.TFrame')
         row.grid(row=index*2+1, column=0, sticky='ew', pady=(0, 5))
         check = ttk.Checkbutton(row, text=title, variable=var, style='Card.TCheckbutton', takefocus=True)
@@ -281,7 +282,7 @@ def build_interface(owner):
         fields.columnconfigure(0, weight=1)
         entry = ttk.Entry(fields, textvariable=path)
         entry.grid(row=0, column=0, sticky='ew', padx=(0, 8))
-        button = ttk.Button(fields, text='Выбрать папку', command=browse)
+        button = ttk.Button(fields, text='Выбрать файл' if index == 2 else 'Выбрать папку', command=browse)
         button.grid(row=0, column=1)
         owner._input_controls.extend([check, entry, button])
         entry.bind('<FocusOut>', lambda _: owner._update_status())

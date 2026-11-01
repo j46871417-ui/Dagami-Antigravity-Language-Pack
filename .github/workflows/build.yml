@@ -44,7 +44,10 @@ jobs:
           npx playwright install chromium
 
       - name: Test structured translation in a browser
-        run: node tests/test_structured_thoughts.cjs
+        run: |
+          node tests/test_structured_thoughts.cjs
+          node tests/test_current_runtime.cjs
+          node tests/test_thoughts_auto.cjs
 
       - name: Run Python unit tests
         env:

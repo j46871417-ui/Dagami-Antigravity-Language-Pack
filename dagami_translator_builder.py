@@ -262,9 +262,12 @@ def get_language_dictionary(lang_code: str) -> dict:
     return {}
 
 
-def build_runtime_translator_js(lang_code: str = "ru") -> str:
+def build_runtime_translator_js(lang_code: str = "ru", extra_dictionary: dict | None = None) -> str:
     meta = get_language_metadata(lang_code)
     dictionary = get_language_dictionary(lang_code)
+    if extra_dictionary:
+        dictionary = dictionary | {key: value for key, value in extra_dictionary.items()
+                                   if isinstance(key, str) and isinstance(value, str) and value}
 
     target_lang = meta.get("translatorTarget", lang_code)
     btn_label = meta.get("buttonLabel", f"🌐 {lang_code.upper()}")
@@ -301,6 +304,8 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
 (function () {{
   'use strict';
 
+  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+
   const TARGET_LANG = {json.dumps(target_lang)};
   const BUTTON_LABEL = {json.dumps(btn_label)};
   const BUTTON_TITLE = {json.dumps(btn_title)};
@@ -324,7 +329,7 @@ def build_runtime_translator_js(lang_code: str = "ru") -> str:
     if (!node) return true;
     let el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
     while (el) {{
-      if (el.matches && el.matches('[data-testid="thinking-collapsible-content"],.markdown-body,.rendered-markdown,.cursor-edit')) return true;
+      if (el.matches && el.matches('[data-testid="thinking-collapsible-content"],.markdown-body,.rendered-markdown,.cursor-edit,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[data-lexical-editor="true"],.ProseMirror,[data-message-author-role]')) return true;
       if (IGNORE_TAGS.has(el.tagName)) return true;
       if (el.classList) {{
         if (

@@ -100,6 +100,12 @@ def main():
     if options.codesign_identity and system != 'darwin': parser.error('Signing identity is macOS-only')
     env = dict(os.environ, PYTHONIOENCODING='utf-8', ANTIGRAVITY_SKIP_KILL='1')
     env['DAGAMI_LANGUAGE_STATE'] = str(ROOT/'build'/'check-profile')
+    # Keep extraction local to the build during verification. Restricted build
+    # runners may not permit a new executable to write to the user's TEMP.
+    # This does not change the executable's production extraction location.
+    runtime_temp = ROOT/'build'/'runtime-tmp'
+    runtime_temp.mkdir(parents=True, exist_ok=True)
+    env.update(TMP=str(runtime_temp), TEMP=str(runtime_temp), TMPDIR=str(runtime_temp))
     for script in ('extract_ru_dict.py','build_language_packs.py','verify_build_artifact.py'):
         subprocess.run([sys.executable, script], cwd=ROOT, env=env, check=True)
     spec, name = write_spec(system, arch, options.onefile, options.codesign_identity)
@@ -116,7 +122,11 @@ def main():
     if system == 'win32':
         from app_updates import validate_exe
         validate_exe(executable, APP_VERSION)
-    subprocess.run([str(executable), '--verify-bundle'], cwd=ROOT, env=env, timeout=60, check=True)
+    checked = subprocess.run([str(executable), '--verify-bundle'], cwd=ROOT, env=env,
+        stdin=subprocess.DEVNULL, capture_output=True, timeout=60,
+        creationflags=0x08000000 if system == 'win32' else 0)
+    if checked.returncode:
+        raise RuntimeError('Built executable resource check failed: '+checked.stderr.decode('utf-8', 'replace'))
     if system == 'linux' and folder.is_dir():
         shutil.copy2(ROOT/'assets'/'app-icon-256.png', folder/'dagami-language-pack.png')
         shutil.copy2(ROOT/'install_desktop.py', folder/'install_desktop.py')

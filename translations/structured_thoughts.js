@@ -220,11 +220,25 @@ const StructuredThoughts = (() => {
     const translate = createTranslator(config.target), states = new Set(), byTrigger = new WeakMap();
     const key = 'ag_thoughts_auto_translate';
     let closed = false;
-    function auto() { try { return localStorage.getItem(key) === 'true'; } catch { return false; } }
+    // Storage can be unavailable in an isolated Electron world or webview.
+    // The user's explicit choice must still work for this document.
+    let automatic = false;
+    try { automatic = localStorage.getItem(key) === 'true'; } catch {}
+    function auto() { return automatic; }
+    function setAuto(value, persist = true) {
+      automatic = value;
+      if (persist) { try { localStorage.setItem(key, String(value)); } catch {} }
+      for (const state of states) state.autoChanged();
+    }
+    function storageChanged(event) {
+      if (event.key === key || event.key === null) setAuto(event.key === null ? false : event.newValue === 'true', false);
+    }
+    window.addEventListener('storage', storageChanged);
     function scan() {
       if (closed || window.__ag_renderThought) return;
-      for (const state of states) if (!state.trigger.isConnected) {
-        state.dispose(); states.delete(state);
+      for (const state of states) {
+        if (!state.trigger.isConnected) { state.dispose(); states.delete(state); }
+        else state.refresh();
       }
       for (const trigger of document.querySelectorAll('[data-testid="thinking-collapsible-trigger"]')) {
         if (byTrigger.has(trigger)) continue;
@@ -244,8 +258,8 @@ const StructuredThoughts = (() => {
           for (const event of ['mousedown', 'pointerdown']) el.addEventListener(event, stopEvt);
           toolbar.appendChild(el);
         }
-        let view = null, observer = null, busy = false, epoch = 0, timer = null;
-        function label(translated = false) {
+        let view = null, observer = null, source = null, busy = false, epoch = 0, timer = null;
+        function label(translated = !!(view && view.overlay)) {
           button.textContent = busy ? '⏹' : (translated ? config.originalButton : config.button);
           button.title = busy ? (config.cancelTitle || 'Cancel') : (translated ? config.originalTitle : config.buttonTitle);
           toggle.textContent = auto() ? config.autoOn : config.autoOff;
@@ -260,24 +274,47 @@ const StructuredThoughts = (() => {
         }
         function content() {
           for (const selector of ['[data-testid="thinking-collapsible-content"]', '.markdown-body', '.rendered-markdown', '.cursor-edit']) {
-            const el = parent.querySelector(selector);
-            if (el && !el.classList.contains('ag-thought-overlay') && !el.contains(trigger) && !trigger.contains(el)) return el;
+            for (const el of parent.querySelectorAll(selector)) {
+              if (!el.closest('.ag-thought-overlay,.ag-thought-toolbar') && !el.contains(trigger) && !trigger.contains(el)) return el;
+            }
           }
           const next = trigger.nextElementSibling;
-          return next && !next.matches(OMIT) ? next : null;
+          return next && !next.matches(OMIT) && !next.closest('.ag-thought-overlay,.ag-thought-toolbar') ? next : null;
+        }
+        function schedule(delay = 800) {
+          if (timer) clearTimeout(timer);
+          timer = null;
+          if (!closed && auto() && source) timer = setTimeout(() => {
+            timer = null;
+            if (auto() && !closed) show();
+          }, delay);
+        }
+        function refresh() {
+          const el = content();
+          if (el === source) return;
+          reset();
+          if (observer) observer.disconnect();
+          source = el;
+          if (source) {
+            // Observe from discovery, before any manual or automatic request.
+            // React may mount/replace content after the trigger appeared.
+            observer = new MutationObserver(() => {
+              reset();
+              schedule();
+            });
+            observer.observe(source, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['href', 'src', 'hidden', 'data-state', 'aria-hidden', 'class'] });
+            schedule(600);
+          }
         }
         async function show() {
-          const el = content();
-          if (!el) return;
+          refresh();
+          const el = source;
+          if (!el || !el.isConnected || closed) return;
+          if (timer) clearTimeout(timer);
+          timer = null;
           if (view) view.dispose();
-          if (observer) observer.disconnect();
           view = createView(el, translate);
           const current = ++epoch;
-          observer = new MutationObserver(() => {
-            reset();
-            if (auto()) timer = setTimeout(show, 800);
-          });
-          observer.observe(el, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['href', 'src', 'hidden', 'data-state', 'aria-hidden', 'class'] });
           busy = true; label();
           try {
             const shown = await view.show();
@@ -295,19 +332,22 @@ const StructuredThoughts = (() => {
         });
         toggle.addEventListener('click', e => {
           stopEvt(e);
-          try { localStorage.setItem(key, auto() ? 'false' : 'true'); } catch {}
-          for (const state of states) state.label();
-          if (auto()) show();
-          else for (const state of states) state.reset();
+          setAuto(!auto());
         });
         trigger.appendChild(toolbar); label();
-        const state = { trigger, label, reset, dispose() { reset(); if (observer) observer.disconnect(); toolbar.remove(); byTrigger.delete(trigger); } };
+        const state = { trigger, label, reset, refresh,
+          autoChanged() { reset(); refresh(); if (auto()) schedule(0); },
+          dispose() { reset(); if (observer) observer.disconnect(); toolbar.remove(); byTrigger.delete(trigger); }
+        };
         byTrigger.set(trigger, state); states.add(state);
-        if (auto()) timer = setTimeout(show, 600);
+        refresh();
       }
     }
     const interval = setInterval(scan, 500); scan();
-    window.addEventListener('pagehide', () => { closed = true; clearInterval(interval); for (const state of states) state.dispose(); }, { once: true });
+    window.addEventListener('pagehide', () => {
+      closed = true; clearInterval(interval); window.removeEventListener('storage', storageChanged);
+      for (const state of states) state.dispose(); states.clear();
+    }, { once: true });
   }
   return { textPairs, createView, createTranslator, install };
 })();

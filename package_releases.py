@@ -31,9 +31,11 @@ COMMON_FILES = [
     "build_release.py", "package_native.py", "install_desktop.py", "PORTS.md",
     "dagami_ag_localizer.py",
     "dagami_translator_builder.py",
-    "js_literals.py", "jsonc_utils.py", "localizer_core.py", "localizer_state.py",
+    "js_literals.py", "jsonc_utils.py", "localizer_core.py", "localizer_state.py", "cli_localization.py",
     "INSTRUCTIONS.md",
     "CHANGES_1.2.0.md",
+    "CHANGES_1.3.0.md",
+    "CHANGES_1.3.1.md",
     "README.md",
     "LICENSE", "ASSET_SOURCES.json",
 ]

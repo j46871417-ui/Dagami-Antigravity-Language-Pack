@@ -66,7 +66,7 @@ def ide_version(app, root):
         file = base / name
         if file.exists():
             info = load(file)
-            values.append([info.get('version'), info.get('commit')])
+            values.append([info.get('version'), info.get('ideVersion'), info.get('commit')])
     return hashlib.sha256(json.dumps(values).encode()).hexdigest() if values else None
 
 
@@ -90,6 +90,20 @@ def nls_by_keys(source, keys, contents):
 
 
 class InstallOperations:
+    def install_selected(self, lang_code='ru'):
+        if self.cli_path and lang_code != 'ru':
+            self.log('[CLI] Для CLI доступен только ru. Выберите отдельно IDE/Desktop для другого языка.')
+            return False
+        selected = [(self.ide_path, self.install_ide), (self.desktop_path, self.install_desktop),
+                    (self.cli_path, self.install_cli)]
+        if not any(path for path, _ in selected):
+            self.log('Приложения не выбраны. Укажите путь.')
+            return False
+        success = True
+        for path, install in selected:
+            if path and not install(lang_code): success = False
+        return success
+
     def _prepare(self, root):
         app = api(self)
         # Modifying an integrity checked signed bundle invalidates its signature.
@@ -115,7 +129,7 @@ class InstallOperations:
                 raise ValueError('Invalid language code')
             language = app.LANGUAGES_DIR / lang_code
             translations, meta = load(language / 'ide.json'), load(language / 'metadata.json')
-            with PatchState(app.resolve_ide_path(self.ide_path), [self.ide_user_data], version=ide_version(app, self.ide_path)) as state:
+            with PatchState(app.resolve_ide_path(self.ide_path), [self.ide_user_data, self.ide_extensions], version=ide_version(app, self.ide_path)) as state:
                 changes = {}
                 pkg_path = ext / 'package.json'
                 pkg = json.loads(state.original(pkg_path))
@@ -144,7 +158,16 @@ class InstallOperations:
                 for path, mapping in [(ext / 'dist' / 'extension.js', ui), (out / 'jetskiAgent' / 'main.js', chat)]:
                     source = state.original(path)
                     if source is not None:
-                        text, changed = app.replace_js_string_literals(source.decode('utf-8'), mapping, self.log)
+                        if path == out / 'jetskiAgent' / 'main.js':
+                            # Translate rendered text, not arbitrary values in the React bundle.
+                            # That preserves status enums, protocol fields and component keys.
+                            text = app.inject_dom_translator(source.decode('utf-8'), app.dtb.build_runtime_translator_js(lang_code, ui | chat))
+                            changed = 0
+                        elif ext.name == 'agy':
+                            # The new extension host is executable integration code, not UI.
+                            continue
+                        else:
+                            text, changed = app.replace_js_string_literals(source.decode('utf-8'), mapping, self.log)
                         changes[path] = text.encode('utf-8'); count += changed
                 argv = self.ide_user_data / 'argv.json'
                 source = state.original(argv)
@@ -173,7 +196,7 @@ class InstallOperations:
                         else:
                             self.log('[IDE] NLS: нет файла ключей. Каркас сохранён.')
                 if lang_code == 'ru' and app.RU_PACK_ZIP.exists():
-                    pack = self.ide_user_data / 'extensions' / 'ms-ceintl.vscode-language-pack-ru-1.106.0-universal'
+                    pack = self.ide_extensions / 'ms-ceintl.vscode-language-pack-ru-1.106.0-universal'
                     with zipfile.ZipFile(app.RU_PACK_ZIP) as archive:
                         for item in archive.infolist():
                             name = Path(item.filename)
@@ -183,6 +206,8 @@ class InstallOperations:
                                 path = pack / name
                                 state.original(path)
                                 changes[path] = archive.read(item)
+                if count == 0 and not any(app.PRELOAD_MARKER.encode() in value for value in changes.values()):
+                    raise ValueError('IDE: не найдены поддерживаемые строки или панель. Файлы не изменены.')
                 state.apply(changes)
                 self.log(f'[IDE] Готово. Строк: {count}. Язык: {lang_code}.')
             return True
@@ -265,10 +290,30 @@ class InstallOperations:
             self.log(f'[Desktop] Сбой: {error}')
             return False
 
+    def install_cli(self, lang_code='ru'):
+        app = api(self)
+        try:
+            from cli_localization import load_catalog, translate
+            path = Path(self.cli_path).resolve() if self.cli_path else None
+            if not path or not path.is_file() or path.name.lower() != 'agy.exe':
+                raise ValueError('CLI: выберите agy.exe (Windows x64).')
+            if lang_code != 'ru':
+                raise ValueError('CLI: пока доступен только русский пакет служебных строк.')
+            catalog = load_catalog(app.LANGUAGES_DIR / 'ru' / 'cli.json')
+            with PatchState(path.parent) as state:
+                original = state.original(path)
+                content, count = translate(original, catalog)
+                state.apply({path: content})
+            self.log(f'[CLI] Готово. Служебных строк: {count}. Команды и ответы модели сохранены.')
+            return True
+        except Exception as error:
+            self.log(f'[CLI] Сбой: {error}')
+            return False
+
     def restore_all(self):
         app = api(self)
         count, ok = 0, True
-        for root, extra in [(self.ide_path, [self.ide_user_data]), (self.desktop_path, [])]:
+        for root, extra in [(self.ide_path, [self.ide_user_data, self.ide_extensions]), (self.desktop_path, [])]:
             if not root:
                 continue
             try:
@@ -278,7 +323,7 @@ class InstallOperations:
                     created = [Path(name) for name, entry in state.entries.items() if entry['original'] is None]
                     count += state.restore()
                     # Only remove empty folders of the known pack we created.
-                    pack = self.ide_user_data / 'extensions' / 'ms-ceintl.vscode-language-pack-ru-1.106.0-universal'
+                    pack = self.ide_extensions / 'ms-ceintl.vscode-language-pack-ru-1.106.0-universal'
                     for file in created:
                         parent = file.parent
                         while parent.is_relative_to(pack) and parent != pack.parent:
@@ -287,5 +332,15 @@ class InstallOperations:
                             parent = parent.parent
             except Exception as error:
                 self.log(f'[Откат] Сбой: {error}'); ok = False
+        if self.cli_path:
+            try:
+                path = Path(self.cli_path).resolve()
+                with PatchState(path.parent) as state:
+                    # Do not restore unrelated applications in the same bin folder.
+                    if str(path) in state.entries:
+                        state.apply({path: state.original(path)}, restoring=True)
+                        count += 1
+            except Exception as error:
+                self.log(f'[Откат CLI] Сбой: {error}'); ok = False
         self.log(f'[Откат] Число файлов: {count}.')
         return ok and count > 0

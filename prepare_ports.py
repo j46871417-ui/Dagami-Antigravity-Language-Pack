@@ -7,7 +7,7 @@ from app_info import APP_VERSION
 ROOT=Path(__file__).resolve().parent
 FILES=['language_pack.py','launch.py','dagami_ag_localizer.py','native_design.py',
        'app_info.py','app_updates.py','update_ui.py','platform_support.py',
-       'localizer_core.py','localizer_state.py','jsonc_utils.py','js_literals.py',
+       'localizer_core.py','localizer_state.py','jsonc_utils.py','js_literals.py','cli_localization.py',
        'dagami_translator_builder.py','dagami-ag-localizer.sh','PORTS.md','LICENSE',
        'ASSET_SOURCES.json','install_desktop.py','build_release.py','package_native.py',
        'verify_build_artifact.py','extract_ru_dict.py','build_language_packs.py','requirements.txt','build_icon.py']

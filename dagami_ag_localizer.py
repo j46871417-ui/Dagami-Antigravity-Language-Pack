@@ -91,6 +91,7 @@ def verify_bundle_integrity(bundle_dir: Path = None) -> tuple[bool, list[str]]:
         target_dir / "assets" / "app-icon-256.png",
         target_dir / "translations" / "languages" / "ru" / "dict.json",
         target_dir / "translations" / "languages" / "ru" / "metadata.json",
+        target_dir / 'translations' / 'languages' / 'ru' / 'cli.json',
         target_dir / "translations" / "languages" / "zh" / "dict.json",
         target_dir / "translations" / "languages" / "es" / "dict.json",
         target_dir / "assets" / "ru_pack.zip",
@@ -280,10 +281,17 @@ def get_ide_ext_base(ide_path: Path) -> Path:
     candidates = [
         ip / "resources" / "app" / "extensions" / "antigravity",
         ip / "Resources" / "app" / "extensions" / "antigravity",
+        ip / "resources" / "app" / "extensions" / "agy",
+        ip / "Resources" / "app" / "extensions" / "agy",
     ]
     for c in candidates:
-        if c.exists():
-            return c
+        if (c / 'package.json').is_file():
+            try:
+                metadata = json.loads((c / 'package.json').read_text(encoding='utf-8-sig'))
+            except (OSError, ValueError):
+                continue
+            if metadata.get('name') in ('antigravity', 'google-antigravity'):
+                return c
     return ip / "resources" / "app" / "extensions" / "antigravity"
 
 
@@ -303,7 +311,10 @@ def validate_ide_path(path: Path) -> bool:
     if not path or not path.exists():
         return False
     pkg = get_ide_ext_base(path) / "package.json"
-    return pkg.is_file()
+    try:
+        return json.loads(pkg.read_text(encoding='utf-8-sig')).get('name') in ('antigravity', 'google-antigravity')
+    except (OSError, ValueError):
+        return False
 
 
 def validate_desktop_path(path: Path) -> bool:
@@ -315,10 +326,12 @@ def get_default_paths():
     ide_candidates = []
     desktop_candidates = []
     ide_user_data = user_home / ".antigravity-ide"
+    ide_extensions = user_home / '.antigravity-ide' / 'extensions'
 
     if sys.platform == "win32":
         local_app_data = Path(os.environ.get("LOCALAPPDATA", user_home / "AppData" / "Local"))
         prog_files = Path(os.environ.get("ProgramFiles", "C:\\Program Files"))
+        ide_user_data = Path(os.environ.get('APPDATA', user_home / 'AppData' / 'Roaming')) / 'Antigravity IDE'
         ide_candidates = [
             local_app_data / "Programs" / "Antigravity IDE",
             prog_files / "Antigravity IDE",
@@ -386,7 +399,18 @@ def get_default_paths():
         "ide_path": detected_ide,
         "desktop_path": detected_desktop,
         "ide_user_data": ide_user_data,
+        "ide_extensions": ide_extensions,
+        "cli_path": detect_cli_path(),
     }
+
+
+def detect_cli_path():
+    name = 'agy.exe' if sys.platform == 'win32' else 'agy'
+    candidates = [Path.home()/'.gemini'/'bin'/name, Path.home()/'.local'/'bin'/name]
+    found = shutil.which(name)
+    if found:
+        candidates.insert(0, Path(found))
+    return next((path for path in candidates if path.is_file()), None)
 
 
 # =============================================================================
@@ -594,10 +618,14 @@ class DagamiLocalizer(InstallOperations):
         log_fn=safe_print,
         force_kill: bool = False,
         no_kill: bool = False,
+        cli_path: Path = None,
+        ide_extensions: Path = None,
     ):
         self.ide_path = ide_path
         self.desktop_path = desktop_path
         self.ide_user_data = ide_user_data or get_default_paths()["ide_user_data"]
+        self.ide_extensions = ide_extensions or (self.ide_user_data / 'extensions' if ide_user_data else get_default_paths()['ide_extensions'])
+        self.cli_path = cli_path
         self.log = log_fn
         self.force_kill = force_kill
         self.no_kill = no_kill
@@ -638,28 +666,18 @@ def run_interactive_cli(localizer: DagamiLocalizer):
         choice = input("Введите номер действия: ").strip()
 
         if choice == "1":
-            localizer.install_desktop("ru")
-            if localizer.ide_path:
-                localizer.install_ide("ru")
+            localizer.install_selected('ru')
         elif choice == "2":
-            localizer.install_desktop("zh")
-            if localizer.ide_path:
-                localizer.install_ide("zh")
+            localizer.install_selected('zh')
         elif choice == "3":
-            localizer.install_desktop("es")
-            if localizer.ide_path:
-                localizer.install_ide("es")
+            localizer.install_selected('es')
         elif choice == "4":
-            localizer.install_desktop("ja")
-            if localizer.ide_path:
-                localizer.install_ide("ja")
+            localizer.install_selected('ja')
         elif choice == "5":
             print_language_list()
             custom_code = input("Введите код языка (например, de, fr): ").strip().lower()
             if custom_code:
-                localizer.install_desktop(custom_code)
-                if localizer.ide_path:
-                    localizer.install_ide(custom_code)
+                localizer.install_selected(custom_code)
         elif choice == "6":
             print_language_list()
         elif choice == "7":
@@ -711,8 +729,10 @@ class DagamiGUI:
         default_paths = get_default_paths()
         self.ide_path_var = tk.StringVar(value=str(default_paths["ide_path"] or ""))
         self.desktop_path_var = tk.StringVar(value=str(default_paths["desktop_path"] or ""))
+        self.cli_path_var = tk.StringVar(value=str(default_paths['cli_path'] or ''))
         self.opt_ide = tk.BooleanVar(value=bool(default_paths["ide_path"]))
         self.opt_desktop = tk.BooleanVar(value=bool(default_paths["desktop_path"]))
+        self.opt_cli = tk.BooleanVar(value=bool(default_paths['cli_path']) and sys.platform == 'win32')
 
         # Russian is the explicit default, independent of directory order.
         langs = sorted(list_available_languages(), key=lambda item: (item.get("code") != "ru", item.get("code", "")))
@@ -778,6 +798,14 @@ class DagamiGUI:
             text="Найдено" if desk_ok else "Укажите папку",
             foreground="#146c43" if desk_ok else "#5b6574"
         )
+        cli = Path(self.cli_path_var.get()) if self.cli_path_var.get().strip() else None
+        self.cli_status_label.config(text='RU · проверка сборки при установке' if cli and cli.is_file() else 'Укажите agy.exe', foreground='#5b6574')
+
+    def _browse_cli(self):
+        value = self.filedialog.askopenfilename(title='Выберите Antigravity CLI (agy.exe)', filetypes=[('Antigravity CLI', 'agy.exe'), ('Все файлы', '*')])
+        if value:
+            self.cli_path_var.set(value)
+            self._update_status()
 
     def log(self, msg: str):
         self._log_queue.put(msg)
@@ -837,19 +865,30 @@ class DagamiGUI:
         self.updates.refresh()
         self.log_text.delete("1.0", self.tk.END)
         # Snapshot Tk variables here; worker threads never read or write widgets.
-        ide_enabled, desktop_enabled = self.opt_ide.get(), self.opt_desktop.get()
+        ide_enabled, desktop_enabled, cli_enabled = self.opt_ide.get(), self.opt_desktop.get(), self.opt_cli.get()
         ide_text, desk_text = self.ide_path_var.get().strip(), self.desktop_path_var.get().strip()
-        if (ide_enabled and not ide_text) or (desktop_enabled and not desk_text):
+        cli_text = self.cli_path_var.get().strip()
+        if (ide_enabled and not ide_text) or (desktop_enabled and not desk_text) or (cli_enabled and not cli_text):
             self._busy = False
             self.operation_status.set("Укажите папку выбранного приложения и повторите запуск.")
             self._set_actions(True)
             self.messagebox.showerror("Путь", "Укажите путь к выбранному приложению.")
             return
+        if not restoring and cli_enabled and lang_code != 'ru':
+            self._busy = False
+            self.operation_status.set('CLI поддерживает русский пакет. Для другого языка снимите флажок CLI.')
+            self._set_actions(True)
+            return
+        if not any((ide_enabled, desktop_enabled, cli_enabled)):
+            self._busy = False
+            self.operation_status.set('Выберите хотя бы одно приложение.')
+            self._set_actions(True)
+            return
         ide_p = Path(ide_text) if ide_enabled else None
         desk_p = Path(desk_text) if desktop_enabled else None
         def worker():
             try:
-                localizer = DagamiLocalizer(ide_path=ide_p, desktop_path=desk_p, log_fn=self.log)
+                localizer = DagamiLocalizer(ide_path=ide_p, desktop_path=desk_p, cli_path=Path(cli_text) if cli_enabled else None, log_fn=self.log)
                 if restoring:
                     success = localizer.restore_all()
                     message = "Исходный вид возвращён." if success else "Не всё удалось. См. журнал."
@@ -857,6 +896,7 @@ class DagamiGUI:
                     success = True
                     if ide_enabled and not localizer.install_ide(lang_code): success = False
                     if desktop_enabled and not localizer.install_desktop(lang_code): success = False
+                    if cli_enabled and not localizer.install_cli(lang_code): success = False
                     message = "Язык установлен." if success else "Не всё удалось. См. журнал."
             except Exception:
                 self.log("Сбой операции. См. пути и права записи.")
@@ -902,6 +942,7 @@ def main():
     parser.add_argument("--gui", action="store_true", help="Запустить графический интерфейс")
     parser.add_argument("--ide-path", type=str, help="Пользовательский путь к Antigravity IDE")
     parser.add_argument("--desktop-path", type=str, help="Пользовательский путь к Antigravity Desktop")
+    parser.add_argument('--cli-path', type=str, help='Путь к Antigravity CLI agy.exe; локализация служебных строк RU')
     parser.add_argument("--no-kill", action="store_true", help="Не завершать процессы Antigravity перед установкой")
     parser.add_argument("--force-kill", action="store_true", help="Принудительно завершить процессы Antigravity")
 
@@ -937,6 +978,7 @@ def main():
     default_paths = get_default_paths()
     ide_p = Path(args.ide_path) if args.ide_path else default_paths["ide_path"]
     desk_p = Path(args.desktop_path) if args.desktop_path else default_paths["desktop_path"]
+    cli_p = Path(args.cli_path) if args.cli_path else default_paths['cli_path'] if sys.platform == 'win32' else None
 
     if args.ide_path and not validate_ide_path(ide_p):
         safe_print(f"[-] Ошибка: указан неверный путь к Antigravity IDE: {args.ide_path}")
@@ -945,15 +987,21 @@ def main():
         safe_print(f"[-] Ошибка: указан неверный путь к Antigravity Desktop: {args.desktop_path}")
         sys.exit(1)
 
-    if args.ide_path and not args.desktop_path:
-        desk_p = None
-    if args.desktop_path and not args.ide_path:
-        ide_p = None
+    if any((args.ide_path, args.desktop_path, args.cli_path)):
+        if not args.ide_path: ide_p = None
+        if not args.desktop_path: desk_p = None
+        if not args.cli_path: cli_p = None
+    if args.cli_path and (not cli_p.is_file() or cli_p.name.lower() != 'agy.exe'):
+        parser.error('Укажите файл agy.exe.')
+    if args.lang and cli_p and args.lang.strip().lower() not in ('ru', 'en'):
+        parser.error('CLI пока поддерживает только ru. Выберите --ide-path / --desktop-path для другого языка.')
 
     localizer = DagamiLocalizer(
+        cli_path=cli_p,
         ide_path=ide_p,
         desktop_path=desk_p,
         ide_user_data=default_paths["ide_user_data"],
+        ide_extensions=default_paths['ide_extensions'],
         force_kill=args.force_kill,
         no_kill=args.no_kill,
     )
@@ -982,7 +1030,7 @@ def main():
                 sys.exit(1)
             return
 
-        if not desk_p and not ide_p:
+        if not desk_p and not ide_p and not cli_p:
             safe_print("[-] Ошибка: целевые пути Antigravity не найдены. Укажите --ide-path или --desktop-path.")
             sys.exit(1)
 
@@ -994,6 +1042,8 @@ def main():
         if ide_p:
             if not localizer.install_ide(lang_code):
                 success = False
+        if cli_p and not localizer.install_cli(lang_code):
+            success = False
 
         if not success:
             sys.exit(1)
@@ -1007,7 +1057,7 @@ def main():
 
     if args.install:
         print_banner()
-        if not desk_p and not ide_p:
+        if not desk_p and not ide_p and not cli_p:
             safe_print("[-] Ошибка: целевые пути Antigravity не найдены. Укажите --ide-path или --desktop-path.")
             sys.exit(1)
         success = True
@@ -1017,6 +1067,8 @@ def main():
         if ide_p:
             if not localizer.install_ide("ru"):
                 success = False
+        if cli_p and not localizer.install_cli('ru'):
+            success = False
         if not success:
             sys.exit(1)
         return
