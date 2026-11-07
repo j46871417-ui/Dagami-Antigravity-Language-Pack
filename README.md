@@ -1,3 +1,5 @@
+**[Группа Dagami](https://t.me/dagamvi) | [Канал Dagami](https://t.me/dagamivibe) | [Донаты](https://pay.cloudtips.ru/p/671fda86) | dns.dagami.ru | [Обсуждение и техподдержка](https://t.me/dagamvi/2140) | [Сообщить об ошибке](https://dns.dagami.ru/support/agent-proxy/)**
+
 # Dagami Antigravity Language Pack
 
 Языки для Google Antigravity Desktop и IDE: русский, китайский, испанский,
@@ -79,6 +81,8 @@ python language_pack.py --restore --cli-path "C:/path/to/agy.exe"
 Кнопка копии и ссылки в копии вызывают прежние действия.
 При смене текста перевод отменяется; поздний ответ не заменяет свежий блок.
 Очередь допускает два запроса разом; кеш ограничен.
+
+**[Группа Dagami](https://t.me/dagamvi) | [Канал Dagami](https://t.me/dagamivibe) | [Донаты](https://pay.cloudtips.ru/p/671fda86) | dns.dagami.ru | [Обсуждение и техподдержка](https://t.me/dagamvi/2140) | [Сообщить об ошибке](https://dns.dagami.ru/support/agent-proxy/)**
 
 ## Обновления с GitHub
 
@@ -170,10 +174,9 @@ node tests/test_structured_thoughts.cjs
 скрипты; запуск на этих ОС ещё не проверен. Работа всех будущих версий
 Antigravity не обещана.
 
-## Связь и права
-
-[Чат](https://t.me/+8qU7020rMF84OWNi) ·
-[Поддержать](https://pay.cloudtips.ru/p/671fda86)
+## Лицензия
 
 Код проекта — MIT, см. [лицензию](LICENSE).
 Google Antigravity принадлежит Google LLC.
+
+**[Группа Dagami](https://t.me/dagamvi) | [Канал Dagami](https://t.me/dagamivibe) | [Донаты](https://pay.cloudtips.ru/p/671fda86) | dns.dagami.ru | [Обсуждение и техподдержка](https://t.me/dagamvi/2140) | [Сообщить об ошибке](https://dns.dagami.ru/support/agent-proxy/)**

@@ -94,3 +94,5 @@ python build_release.py --onedir
 Для сборки нужны Python 3.12+, Node и Tk. Сборка идёт на целевой ОС.
 macOS с подписью: отказ до записи, пока нет режима новой подписи.
 Рамки платформ и форматы сборок описаны в PORTS.md.
+
+**[Группа Dagami](https://t.me/dagamvi) | [Канал Dagami](https://t.me/dagamivibe) | [Донаты](https://pay.cloudtips.ru/p/671fda86) | dns.dagami.ru | [Обсуждение и техподдержка](https://t.me/dagamvi/2140) | [Сообщить об ошибке](https://dns.dagami.ru/support/agent-proxy/)**
